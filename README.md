@@ -1,4 +1,4 @@
-# 🍿 Snack-O 89
+# 🍿 A-Flight Snacko Store
 
 A tap-to-pay honor-system snack stand. Customers tap an NFC tag, pick what they grabbed, and pay through Venmo in a single tap. No Square, no card reader, no monthly fees.
 
@@ -173,8 +173,10 @@ Because both stands share that origin, the origin check cannot tell this editor 
 | `worker/wrangler.toml` | Worker configuration: name, `GH_REPO`, `ALLOWED_ORIGIN`. Secrets are never in here. |
 | `worker/src/index.js` | The Worker itself. Checks the password, re-validates the menu, commits `menu.json`. |
 | `worker/README.md` | Worker setup, secret rotation, and local testing. |
-| `enjjpt-logo.png` | Squadron patch shown in the header (currently the 459th FTS Twin Dragons). |
-| `icon-192.png`, `icon-512.png` | Home-screen icons for the editor. |
+| `enjjpt-logo.png` | Squadron patch shown in the header of both pages. **Still the 459th FTS Twin Dragons**, inherited from the other project — the favicon and app icons are the 89th. |
+| `89th-Patch.jpeg` | Source art for the icons below. Only 180×198, so the 512px icon is upscaled and a little soft; replace it with a larger copy if you have one and regenerate. |
+| `favicon-64.png` | Browser-tab icon for both pages. Cropped tighter than the app icons so it still reads at the 16px a tab actually draws. |
+| `icon-192.png`, `icon-512.png` | Home-screen icons for the editor, and the `apple-touch-icon` for both pages. |
 | `venmo-logo.png` | Venmo mark shown on the pay button. |
 | `paypal-mark.png` | PayPal monogram shown on the PayPal button, cropped square from `paypal_logo.png`. |
 | `paypal_logo.png` | Original full PayPal lockup. Kept as the source art; the page does not load it. |

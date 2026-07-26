@@ -4,17 +4,17 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex" />
-<title>Snack-O 89 Editor</title>
+<title>A-Flight Snacko Store Editor</title>
 
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icon-192.png" />
-<link rel="icon" href="icon-192.png" />
+<link rel="icon" href="favicon-64.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <!-- Distinct from the separate `snacko` project's editor, so the two do not
      land on the home screen as two identical icons. -->
-<meta name="apple-mobile-web-app-title" content="Snack-O 89" />
+<meta name="apple-mobile-web-app-title" content="A-Flight Snacko" />
 <meta name="theme-color" content="#F3EFE5" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#14161A" media="(prefers-color-scheme: dark)" />
 
@@ -295,7 +295,7 @@
   <header>
     <img class="mark" src="enjjpt-logo.png" alt="" />
     <div>
-      <h1>Snack-O 89 Editor</h1>
+      <h1>A-Flight Snacko Store Editor</h1>
       <div class="sub">Menu management</div>
     </div>
     <span class="spacer"></span>
@@ -560,7 +560,7 @@ async function loadMenu() {
 function normalize(raw) {
   const src = (raw && typeof raw === "object") ? raw : {};
   return {
-    name: typeof src.name === "string" ? src.name : "Snack-O",
+    name: typeof src.name === "string" ? src.name : "A-Flight Snacko Store",
     venmoUsername: typeof src.venmoUsername === "string" ? src.venmoUsername : "",
     categories: (Array.isArray(src.categories) ? src.categories : []).map(cat => ({
       label: (cat && typeof cat.label === "string") ? cat.label : "",

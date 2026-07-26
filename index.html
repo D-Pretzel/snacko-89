@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Snack-O</title>
+<title>A-Flight Snacko Store</title>
+
+<!-- Both are the 89th FTS patch. favicon-64 is cropped tighter so it still
+     reads at the 16px a browser tab actually draws. -->
+<link rel="icon" href="favicon-64.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
 
 <!-- ============================================================= -->
 <!--  The menu lives in menu.json, not in this file.                -->
@@ -283,7 +288,7 @@
   <div class="wrap">
     <header>
       <img class="mark" src="enjjpt-logo.png" alt="459th FTS Twin Dragons emblem" />
-      <h1>Snack-O</h1>
+      <h1>A-Flight Snacko Store</h1>
     </header>
 
     <div id="menu">
@@ -386,7 +391,7 @@
   function render(menu) {
     state = [];
     menuEl.replaceChildren();
-    document.title = menu.name || "Snack-O";
+    document.title = menu.name || "A-Flight Snacko Store";
     const h1 = document.querySelector("h1");
     if (menu.name) h1.textContent = menu.name;
     venmoUsername = menu.venmoUsername || "";
