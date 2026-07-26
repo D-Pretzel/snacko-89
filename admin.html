@@ -332,10 +332,18 @@
         <input type="text" id="menuName" maxlength="60" />
         <span class="err" id="menuNameErr"></span>
       </label>
-      <label class="field" style="margin-bottom:0;">
+      <label class="field">
         <span class="field-label">Venmo username (no @)</span>
         <input type="text" id="venmoName" autocapitalize="off" autocorrect="off" spellcheck="false" />
         <span class="err" id="venmoNameErr"></span>
+      </label>
+      <label class="field" style="margin-bottom:0;">
+        <span class="field-label">PayPal.me username (optional)</span>
+        <input type="text" id="paypalName" autocapitalize="off" autocorrect="off" spellcheck="false" />
+        <!-- Error before hint, so a problem sits against the field it is about
+             rather than below the explanatory text. -->
+        <span class="err" id="paypalNameErr"></span>
+        <span class="dim" style="font-size:12px;">The bit after paypal.me/ in your link. Leave this empty to hide the PayPal button and take Venmo only.</span>
       </label>
     </div>
 
@@ -562,6 +570,8 @@ function normalize(raw) {
   return {
     name: typeof src.name === "string" ? src.name : "A-Flight Snacko Store",
     venmoUsername: typeof src.venmoUsername === "string" ? src.venmoUsername : "",
+    /* Optional, and absent from menus written before the field existed. */
+    paypalHandle: typeof src.paypalHandle === "string" ? src.paypalHandle : "",
     categories: (Array.isArray(src.categories) ? src.categories : []).map(cat => ({
       label: (cat && typeof cat.label === "string") ? cat.label : "",
       items: (Array.isArray(cat && cat.items) ? cat.items : []).map(it => ({
@@ -583,6 +593,7 @@ function normalize(raw) {
 function renderEditor() {
   $("menuName").value = menu.name;
   $("venmoName").value = menu.venmoUsername;
+  $("paypalName").value = menu.paypalHandle;
 
   const host = $("cats");
   host.replaceChildren();
@@ -944,6 +955,11 @@ $("venmoName").addEventListener("input", e => {
   clearFieldError(e.target);
   markDirty();
 });
+$("paypalName").addEventListener("input", e => {
+  menu.paypalHandle = e.target.value;
+  clearFieldError(e.target);
+  markDirty();
+});
 
 $("addCatBtn").addEventListener("click", () => {
   menu.categories.push({ label: "", items: [] });
@@ -959,7 +975,10 @@ $("addCatBtn").addEventListener("click", () => {
 function clearFieldError(field) {
   field.classList.remove("bad");
   const key = field.dataset.err;
-  const box = key ? $("err-" + key) : null;
+  /* Item fields carry data-err; the three top-level fields are found by
+     "<id>Err" instead. flagField resolves both, so clearing must too —
+     otherwise a message stays on screen after the field has been fixed. */
+  const box = (key ? $("err-" + key) : null) || (field.id ? $(field.id + "Err") : null);
   if (box) { box.textContent = ""; box.classList.remove("show"); }
 }
 
@@ -974,7 +993,7 @@ function clearAllErrors() {
 
 function flagField(key, message, problems) {
   const field = document.querySelector(`[data-err="${key}"]`) ||
-                (key === "menuName" || key === "venmoName" ? $(key) : null);
+                (key === "menuName" || key === "venmoName" || key === "paypalName" ? $(key) : null);
   const box = $("err-" + key) || $(key + "Err");
   if (field) field.classList.add("bad");
   if (box) { box.textContent = message; box.classList.add("show"); }
@@ -992,6 +1011,22 @@ function validate() {
 
   if (menu.venmoUsername.trim() === "") {
     flagField("venmoName", "A Venmo username is required, or nobody can pay.", problems);
+  }
+
+  /* PayPal is optional — empty simply hides the button. When it is filled in
+     though, catch the two things that produce a dead link without any error:
+     pasting the whole paypal.me URL, and adding an "@" the way Venmo uses. */
+  const paypal = menu.paypalHandle.trim();
+  if (paypal !== "") {
+    if (paypal.length > MAX_NAME) {
+      flagField("paypalName", `Keep it to ${MAX_NAME} characters.`, problems);
+    } else if (paypal.includes("/")) {
+      flagField("paypalName", "Just the username, not the whole link — the part after paypal.me/", problems);
+    } else if (paypal.startsWith("@")) {
+      flagField("paypalName", "Leave off the @.", problems);
+    } else if (/\s/.test(paypal)) {
+      flagField("paypalName", "A PayPal.me username can't contain spaces.", problems);
+    }
   }
 
   if (menu.categories.length === 0) {
@@ -1065,6 +1100,7 @@ function serialize() {
   return {
     name: menu.name.trim(),
     venmoUsername: menu.venmoUsername.trim(),
+    paypalHandle: menu.paypalHandle.trim(),
     categories: menu.categories.map(cat => ({
       label: cat.label.trim(),
       items: cat.items.map(item => {
@@ -1100,6 +1136,11 @@ function describeChanges(before, after) {
 
   if (before.name !== after.name) out.push(`renamed stand to ${after.name}`);
   if (before.venmoUsername !== after.venmoUsername) out.push("changed Venmo username");
+  if (before.paypalHandle !== after.paypalHandle) {
+    if (!after.paypalHandle) out.push("turned off PayPal");
+    else if (!before.paypalHandle) out.push("turned on PayPal");
+    else out.push("changed PayPal username");
+  }
 
   const catsBefore = before.categories.map(c => c.label);
   const catsAfter = after.categories.map(c => c.label);

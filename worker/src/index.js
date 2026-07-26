@@ -216,6 +216,21 @@ function validateMenu(raw) {
   if (venmoUsername === "") fail("A Venmo username is required.");
   if (venmoUsername.length > MAX_NAME) fail("Venmo username is too long.");
 
+  /* Optional, and absent from menus written before the field existed, so a
+     missing value is empty rather than an error. Empty hides the PayPal
+     button on the customer page. */
+  let paypalHandle = "";
+  if (raw.paypalHandle !== undefined && raw.paypalHandle !== null) {
+    paypalHandle = str(raw.paypalHandle, "paypalHandle").trim();
+    if (paypalHandle.length > MAX_NAME) fail("PayPal username is too long.");
+    /* The handle is interpolated into a paypal.me path. A slash would let it
+       reach a different path entirely, and whitespace makes a dead link. */
+    if (/[\/\s]/.test(paypalHandle)) {
+      fail("PayPal username must be just the username, with no slashes or spaces.");
+    }
+    if (paypalHandle.startsWith("@")) fail("PayPal username must not start with @.");
+  }
+
   if (!Array.isArray(raw.categories)) fail("categories must be an array.");
   if (raw.categories.length === 0) fail("At least one category is required.");
 
@@ -238,7 +253,7 @@ function validateMenu(raw) {
     return { label, items };
   });
 
-  return { name, venmoUsername, categories };
+  return { name, venmoUsername, paypalHandle, categories };
 }
 
 function validateItem(item, catLabel, ii) {

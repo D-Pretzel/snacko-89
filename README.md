@@ -38,6 +38,7 @@ You can:
 
 - Add, rename, reorder, and delete categories and items
 - Set prices, and move an item from one category to another
+- Change the Venmo username and the PayPal.me username, so a change of snacko needs no code change
 - Add a short description under any item ("12 oz cans")
 - Put an item on sale by a percentage, with an optional end date
 - Hide an item without deleting it, for when you are out of stock
@@ -61,6 +62,7 @@ A sale is stored as a percentage off, never as a second price. The discounted pr
 {
   "name": "Snack-O",
   "venmoUsername": "your-venmo-username",
+  "paypalHandle": "YourPayPalName",
   "categories": [
     {
       "label": "Drinks",
@@ -75,7 +77,8 @@ A sale is stored as a percentage off, never as a second price. The discounted pr
 ```
 
 - `name` — what shows in the header and the browser tab.
-- `venmoUsername` — the handle, without the `@`.
+- `venmoUsername` — the handle, without the `@`. Required.
+- `paypalHandle` — the part after `paypal.me/` in your link, with no `@` and no slashes. Optional: empty or absent hides the PayPal button and leaves Venmo as the only way to pay.
 - `price` — dollars, at most two decimal places.
 - `description` — optional. Leave it out and the row looks exactly as it always has.
 - `sale` — optional. `percentOff` is a whole number from 1 to 99; `until` is optional and formatted `YYYY-MM-DD`, and the last day counts.
@@ -128,7 +131,7 @@ Add a small "Tap to pay 📱" label near the tag so customers know what it is.
 
 ## Testing before you launch
 
-**Both payment handles are set.** Venmo is `Thomas-Calabrese-8`, in `menu.json`. PayPal is `ThomasCalabrese797`, in the `PAYPAL_HANDLE` constant in `index.html`. They live in two different files because only the Venmo one is editable from `admin.html`; changing the PayPal handle means editing `index.html`.
+**Both payment handles are set**, and both live in `menu.json` where the editor can reach them: Venmo is `Thomas-Calabrese-8`, PayPal is `ThomasCalabrese797`. Neither one needs a code change to alter, so a change of snacko does not need a developer.
 
 Send yourself a real payment of a dollar or two through each button before the tags go out. A handle that does not exist does not throw an error — Venmo and PayPal both just open a page that goes nowhere, or worse, to someone else with a similar handle.
 
@@ -152,7 +155,7 @@ Because both stands share that origin, the origin check cannot tell this editor 
 
 - **Both pages adapt to light and dark mode** automatically.
 - **The pay buttons stay disabled** until at least one item is added, so nobody sends a zero payment.
-- **The PayPal button is off until you set a handle.** `index.html` has a `PAYPAL_HANDLE` constant near the top of its script; while it is empty the button is hidden entirely and Venmo is the only way to pay. Set it to the part after `paypal.me/` in your link. Unlike the Venmo username it is not in `menu.json`, so changing it means editing `index.html`.
+- **The PayPal button is off until you set a handle.** Clear the "PayPal.me username" field in the editor and the button is hidden entirely, leaving Venmo as the only way to pay. Fill it back in and it returns. The value is the part after `paypal.me/` in your link — the editor will stop you if you paste the whole URL or put an `@` on the front, because either produces a link that fails silently.
 - **PayPal payments arrive without the itemized note.** PayPal.me links carry an amount and nothing else, so the note only rides along on Venmo. That is a PayPal limitation, not a bug here.
 - **The payment note is itemized** and written to read like a sentence, for example `E-Flight SNACKO: 2x Cookie and Soda`, so you can see what each sale was. It is prefixed with the stand name from `menu.json`, drops the `1x` for single items, and is trimmed at Venmo's 280-character limit.
 - **Sale prices are what customers are charged** — the total and the Venmo amount both use the discounted price.

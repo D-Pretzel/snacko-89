@@ -354,16 +354,16 @@
   const payBtn  = document.getElementById("payBtn");
   const paypalBtn = document.getElementById("paypalBtn");
 
-  /* PayPal.me handle, without the "@" or any URL around it — the bit after
-     paypal.me/ in your link. Leave it empty and the PayPal button stays hidden,
-     leaving Venmo as the only way to pay. Unlike the Venmo username this is not
-     in menu.json, so changing it means editing this line.
-     PayPal.me prefills the amount but has no field for a note, so the itemized
-     list only rides along on Venmo payments. */
-  const PAYPAL_HANDLE = "ThomasCalabrese797";
-
   let state = [];
   let venmoUsername = "";
+  /* PayPal.me handle, without the "@" or any URL around it — the bit after
+     paypal.me/ in your link. It lives in menu.json alongside the Venmo
+     username and is set from admin.html, so it survives a change of snacko
+     without anyone editing this file. Empty hides the PayPal button entirely
+     and leaves Venmo as the only way to pay.
+     PayPal.me prefills the amount but has no field for a note, so the
+     itemized list only ever rides along on Venmo payments. */
+  let paypalHandle = "";
   let standName = "";
 
   function el(tag, className, text) {
@@ -395,6 +395,7 @@
     const h1 = document.querySelector("h1");
     if (menu.name) h1.textContent = menu.name;
     venmoUsername = menu.venmoUsername || "";
+    paypalHandle = (menu.paypalHandle || "").trim();
     standName = menu.name || "";
 
     let anyVisible = false;
@@ -488,7 +489,7 @@
     totalEl.textContent = money(total);
     countEl.textContent = count;
 
-    paypalBtn.hidden = !PAYPAL_HANDLE;
+    paypalBtn.hidden = !paypalHandle;
 
     if (total <= 0) {
       payBtn.classList.add("disabled");
@@ -498,11 +499,18 @@
       return;
     }
     payBtn.classList.remove("disabled");
-    paypalBtn.classList.remove("disabled");
 
     /* PayPal.me takes the amount as the last path segment and nothing else —
-       no note, no currency argument. */
-    paypalBtn.href = `https://paypal.me/${encodeURIComponent(PAYPAL_HANDLE)}/${total.toFixed(2)}`;
+       no note, no currency argument. With no handle the button is already
+       hidden, so leave it without an href rather than building a link to
+       paypal.me// that goes nowhere. */
+    if (paypalHandle) {
+      paypalBtn.classList.remove("disabled");
+      paypalBtn.href = `https://paypal.me/${encodeURIComponent(paypalHandle)}/${total.toFixed(2)}`;
+    } else {
+      paypalBtn.classList.add("disabled");
+      paypalBtn.removeAttribute("href");
+    }
 
     /* The query is built by hand rather than with URLSearchParams, which
        encodes spaces as "+" — Venmo shows the note verbatim, plus signs and
