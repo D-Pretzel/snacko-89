@@ -62,7 +62,10 @@
     padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
   }
 
-  .wrap { max-width: 520px; margin: 0 auto; padding: 22px 18px 200px; }
+  /* The bottom padding is a starting guess only — the script measures the bar
+     and overwrites it, because a fixed number cannot know how tall the bar
+     actually is and the last rows end up unreachable behind it when it grows. */
+  .wrap { max-width: 520px; margin: 0 auto; padding: 22px 18px 180px; }
 
   /* Header */
   header {
@@ -104,6 +107,9 @@
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     transition: border-color .18s ease, background .18s ease;
+    /* The browser scrolls a focused row to the viewport edge, which is behind
+       the fixed bar. --bar-h is kept current by the script. */
+    scroll-margin-bottom: calc(var(--bar-h, 180px) + 12px);
   }
   .item.active {
     border-color: var(--blue);
@@ -205,54 +211,73 @@
   .retry:hover { border-color: var(--accent); }
   .retry:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  /* Sticky totals bar */
+  /* Sticky totals bar.
+
+     This covers the menu on a phone, so it is kept as short as it can be
+     without shrinking anything you have to read or hit. Most of the saving
+     comes from setting the two pay buttons side by side instead of stacking
+     them: that is one button height and one gap removed. The rest is the
+     item count and the total sharing one line rather than two. */
   .bar {
     position: fixed; left: 0; right: 0; bottom: 0;
-    padding: 14px 18px calc(16px + env(safe-area-inset-bottom));
+    /* env() is 0 on anything without a home indicator, so the bottom value has
+       to stand on its own there rather than relying on the inset. */
+    padding: 10px 18px calc(12px + env(safe-area-inset-bottom));
     background: color-mix(in srgb, var(--bg) 88%, transparent);
     backdrop-filter: saturate(180%) blur(14px);
     -webkit-backdrop-filter: saturate(180%) blur(14px);
     border-top: 1px solid var(--rule);
   }
-  .bar .inner { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-  .tot-lines { display: flex; flex-direction: column; gap: 4px; }
-  .tot-lines .line {
+  .bar .inner { max-width: 520px; margin: 0 auto; }
+
+  /* Count and total on one line. The dashed rule stays — it is the ledger
+     language the rest of the page is built on. */
+  .totals {
     display: flex; justify-content: space-between; align-items: baseline;
+    gap: 12px;
+    padding-bottom: 8px; margin-bottom: 10px;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .totals .items {
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
     font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
     color: var(--muted);
   }
-  .tot-lines .line .val {
-    color: var(--ink); font-variant-numeric: tabular-nums;
-    letter-spacing: normal; text-transform: none;
+  .totals .grand {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 23px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
   }
-  .tot-lines .line.total {
-    padding-top: 8px; border-top: 1px dashed var(--rule);
-    font-size: 12.5px; color: var(--ink);
-  }
-  .tot-lines .line.total .val { font-size: 24px; font-weight: 600; }
+
+  .pay-row { display: flex; gap: 10px; }
 
   .pay {
-    display: flex; align-items: center; justify-content: space-between;
-    width: 100%; padding: 19px 22px;
+    flex: 1 1 0; min-width: 0;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    /* 52px clears the 44px minimum tap target with room to spare, and is what
+       holds the button height up when the padding comes down. */
+    min-height: 52px;
+    padding: 14px 16px;
     border: none; border-radius: 14px;
     background: var(--ink); color: var(--bg);
     font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 17px; font-weight: 600;
-    letter-spacing: .04em;
+    font-size: 16px; font-weight: 600;
+    letter-spacing: .03em;
+    white-space: nowrap;
     text-decoration: none; cursor: pointer;
     transition: background .18s ease, color .18s ease;
   }
   .pay:hover { background: var(--venmo); color: #fff; }
   .pay:focus-visible { outline: 2px solid var(--venmo); outline-offset: 2px; }
   .pay.disabled { background: var(--rule); color: var(--muted); pointer-events: none; }
-  .pay .arrow { font-family: 'IBM Plex Mono', monospace; font-size: 18px; }
 
   /* PayPal is the secondary option, so it is outlined rather than filled —
-     two solid slabs stacked are easy to misclick. The 1px border is taken out
-     of the padding so both buttons end up the same height. */
+     two solid slabs are easy to confuse at a glance. The 1px border is taken
+     out of the padding so both buttons end up the same height. */
   .pay.alt {
-    padding: 18px 21px;
+    padding: 13px 15px;
     border: 1px solid var(--rule);
     background: transparent; color: var(--ink);
     transition: background .18s ease, color .18s ease, border-color .18s ease;
@@ -260,11 +285,11 @@
   .pay.alt:hover { background: var(--paypal); color: #fff; border-color: var(--paypal); }
   .pay.alt:focus-visible { outline-color: var(--paypal); }
   .pay.alt.disabled { background: transparent; border-color: var(--rule); color: var(--muted); opacity: .65; }
+  /* With no PayPal handle set, Venmo flexes out to the full width on its own. */
   .pay.alt[hidden] { display: none; }
 
-  .pay .label { display: inline-flex; align-items: center; gap: 12px; }
   .venmo-logo, .paypal-logo {
-    width: 26px; height: 26px;
+    width: 24px; height: 24px; flex: 0 0 24px;
     display: inline-flex; align-items: center; justify-content: center;
     border-radius: 7px; padding: 2px;
     background: transparent;
@@ -298,28 +323,27 @@
 
   <div class="bar">
     <div class="inner">
-      <div class="tot-lines">
-        <div class="line"><span>Items</span><span class="val" id="count">0</span></div>
-        <div class="line total"><span>Total</span><span class="val" id="total">$0.00</span></div>
+      <div class="totals">
+        <span class="items"><span id="count">0</span> <span id="countLabel">items</span></span>
+        <span class="grand" id="total">$0.00</span>
       </div>
-      <a class="pay alt disabled" id="paypalBtn" href="#" hidden>
-        <span class="label">
+      <!-- The visible labels are just the brand, since the total sits directly
+           above and both buttons carry their mark. aria-label keeps the full
+           phrase for screen readers. -->
+      <div class="pay-row">
+        <a class="pay alt disabled" id="paypalBtn" href="#" aria-label="Pay with PayPal" hidden>
           <span class="paypal-logo" aria-hidden="true">
             <img src="paypal-mark.png" alt="" />
           </span>
-          <span>Pay with PayPal</span>
-        </span>
-        <span class="arrow">→</span>
-      </a>
-      <a class="pay disabled" id="payBtn" href="#">
-        <span class="label">
+          <span>PayPal</span>
+        </a>
+        <a class="pay disabled" id="payBtn" href="#" aria-label="Pay with Venmo">
           <span class="venmo-logo" aria-hidden="true">
             <img src="venmo-logo.png" alt="" />
           </span>
-          <span>Pay with Venmo</span>
-        </span>
-        <span class="arrow">→</span>
-      </a>
+          <span>Venmo</span>
+        </a>
+      </div>
     </div>
   </div>
 
@@ -351,6 +375,7 @@
   const menuEl  = document.getElementById("menu");
   const totalEl = document.getElementById("total");
   const countEl = document.getElementById("count");
+  const countLabelEl = document.getElementById("countLabel");
   const payBtn  = document.getElementById("payBtn");
   const paypalBtn = document.getElementById("paypalBtn");
 
@@ -488,6 +513,7 @@
     const count = state.reduce((s, it) => s + it.qty, 0);
     totalEl.textContent = money(total);
     countEl.textContent = count;
+    countLabelEl.textContent = count === 1 ? "item" : "items";
 
     paypalBtn.hidden = !paypalHandle;
 
@@ -557,6 +583,29 @@
       );
     }
   }
+
+  /* The bar is fixed, so the list needs clearance under it or the last rows
+     sit behind the buttons — close enough to look tappable, but the tap lands
+     on the bar. The height is not a constant: it changes when the PayPal
+     button appears, when the webfont finishes loading, and on rotation. So
+     measure the bar and follow it rather than hard-coding a number that was
+     already wrong once. */
+  const barEl = document.querySelector(".bar");
+  const wrapEl = document.querySelector(".wrap");
+  function syncBarClearance() {
+    const h = barEl.offsetHeight;
+    wrapEl.style.paddingBottom = (h + 28) + "px";
+    /* Also drives scroll-margin-bottom on the rows, so tabbing to a control
+       near the end of the list does not park it underneath the bar. */
+    document.documentElement.style.setProperty("--bar-h", h + "px");
+  }
+  if (window.ResizeObserver) {
+    new ResizeObserver(syncBarClearance).observe(barEl);
+  } else {
+    window.addEventListener("resize", syncBarClearance);
+    window.addEventListener("orientationchange", syncBarClearance);
+  }
+  syncBarClearance();
 
   load();
 </script>
