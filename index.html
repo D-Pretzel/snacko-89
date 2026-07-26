@@ -138,6 +138,28 @@
      region display:none — screen readers announce changes less reliably then. */
   .search-status:empty { margin: 0; }
 
+  /* Present to assistive tech, absent from the layout. */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    margin: -1px; padding: 0; border: 0;
+    clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+  }
+
+  /* Names are normally clipped to one line with an ellipsis, which can hide the
+     very run that matched — "Propel Electrolyte Drink Powder Stick" searched
+     for "powder" would otherwise show no highlight at all. While filtering,
+     let them wrap. */
+  #menu.searching .name-lead { overflow: visible; }
+  #menu.searching .name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    flex: 1 1 auto;      /* the full row, rather than sharing it with the leader */
+  }
+  /* The dotted leader is decoration, and squeezing a wrapping name against it
+     stacks the words into a narrow column. It comes back when the search clears. */
+  #menu.searching .lead { display: none; }
+
   mark {
     background: var(--hit);
     color: inherit;   /* never the UA's black-on-yellow, which fights dark mode */
@@ -145,8 +167,10 @@
     padding: 0 1px;
   }
 
-  /* Category sections */
-  .cat + .cat { margin-top: 22px; }
+  /* Category sections. Spaced with a flex gap rather than `.cat + .cat`, which
+     keys off DOM order and so leaves a phantom 22px above the first result
+     when the sections before it are filtered out. Gaps ignore hidden children. */
+  #menu { display: flex; flex-direction: column; gap: 22px; }
   .cat-head {
     display: flex; align-items: center; gap: 10px;
     padding: 6px 4px 8px;
@@ -405,7 +429,11 @@
              spellcheck="false" enterkeyhint="search" />
       <button type="button" class="search-clear" id="searchClear" aria-label="Clear search" hidden>✕</button>
     </div>
-    <p class="search-status" id="searchStatus" role="status" aria-live="polite"></p>
+    <!-- Two elements on purpose: the visible count updates on every keystroke,
+         while the announced one is debounced, so a screen reader gets one
+         result count per pause instead of one per character typed. -->
+    <p class="search-status" id="searchStatus" aria-hidden="true"></p>
+    <p class="sr-only" id="searchAnnounce" role="status"></p>
 
     <div id="menu">
       <div class="state"><p>Loading menu…</p></div>
@@ -479,6 +507,7 @@
   const searchInput  = document.getElementById("searchInput");
   const searchClear  = document.getElementById("searchClear");
   const searchStatus = document.getElementById("searchStatus");
+  const searchAnnounce = document.getElementById("searchAnnounce");
   const noResults    = document.getElementById("noResults");
   const noResultsQ   = document.getElementById("noResultsQuery");
 
@@ -520,6 +549,7 @@
     searchInput.value = "";
     searchClear.hidden = true;
     searchStatus.textContent = "";
+    searchAnnounce.textContent = "";
     noResults.hidden = true;
     updateTotals();
     menuEl.replaceChildren();
@@ -548,7 +578,7 @@
     let anyVisible = false;
 
     (menu.categories || []).forEach(cat => {
-      const items = (cat.items || []).filter(it => !it.hidden);
+      const items = (cat.items || []).filter(it => it && !it.hidden);
       if (items.length === 0) return;   // skip empty categories
       anyVisible = true;
 
@@ -561,18 +591,34 @@
       section.appendChild(head);
 
       const list = el("div", "list");
-      items.forEach(item => {
+      items.forEach(raw => {
+        /* Editing menu.json by hand on GitHub is a documented fallback, so one
+           typo there must cost one row, not the whole storefront. A missing or
+           non-string name used to reach foldWithMap() and throw "s is not
+           iterable" straight out of render(), leaving the customer an empty
+           page and a misleading connection error. Price is coerced for the
+           same reason — a quoted "1.50" would otherwise throw on toFixed. */
+        const item = (typeof raw.name === "string" && Number.isFinite(raw.price))
+          ? raw
+          : Object.assign({}, raw, {
+              name: typeof raw.name === "string" ? raw.name : "",
+              price: Number.isFinite(raw.price) ? raw.price : Number(raw.price) || 0,
+            });
+
         const entry = { name: item.name, price: effectivePrice(item), qty: 0 };
         state.push(entry);
         const row = itemRow(item, entry);
         /* Folded once here, so a keystroke costs only indexOf over these. */
         const folded = foldWithMap(item.name);
+        const bounds = clusterBounds(item.name);
         searchIndex.push({
           row, section,
           nameEl: row.querySelector(".name"),
           original: item.name,
           folded: folded.text,
           map: folded.map,
+          startOf: bounds.startOf,
+          endOf: bounds.endOf,
         });
         list.appendChild(row);
       });
@@ -587,7 +633,10 @@
 
     searchWrap.hidden = searchIndex.length < SEARCH_MIN_ITEMS;
     if (searchWrap.hidden) searchInput.value = "";
-    applyFilter();          /* re-applies any live query across a menu reload */
+    /* Establishes the initial state of the field, the clear button and the
+       status line. It is not carrying a query across a reload: load() calls
+       showState() first, which empties the field. */
+    applyFilter();
     updateTotals();
   }
 
@@ -662,7 +711,11 @@
     const map = [];
     let i = 0;
     for (const ch of s) {
-      const folded = ch.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+      /* Greek writes a different sigma at the end of a word, so "ΟΔΟΣ" folds to
+         οδοσ while someone typing it naturally in lower case produces οδος.
+         Collapsing the two is a one-for-one swap, so the index map stays valid. */
+      const folded = ch.normalize("NFD").replace(/\p{Diacritic}/gu, "")
+                       .toLowerCase().replace(/ς/g, "σ");
       text += folded;
       /* One entry per UTF-16 code unit, because indexOf() below returns code
          unit offsets. Walking `folded` with for..of instead would push a single
@@ -675,8 +728,44 @@
     return { text, map };
   }
 
+  /* Deliberately routed through the same per-character path as the names, so
+     the two folds cannot disagree. Lowercasing a whole string maps a trailing
+     Σ to final sigma ς while the per-character fold gives σ, which would leave
+     an item called "ΟΔΟΣ" unable to match the word "ΟΔΟΣ". */
   function foldQuery(s) {
-    return s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+    return foldWithMap(s).text;
+  }
+
+  const segmenter = (typeof Intl !== "undefined" && Intl.Segmenter)
+    ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
+    : null;
+
+  /* For each index of the original name, the bounds of the grapheme cluster it
+     belongs to. Highlight ranges are snapped out to these, so a <mark> never
+     lands inside a ZWJ emoji, a flag, or a skin-tone modifier — splitting one
+     makes it render as its component parts, and the row visibly jumps. It also
+     makes a zero-width range impossible, which a fold that expands one
+     character into two units can otherwise produce. */
+  function clusterBounds(s) {
+    const startOf = new Array(s.length + 1);
+    const endOf = new Array(s.length + 1);
+    if (segmenter) {
+      for (const seg of segmenter.segment(s)) {
+        const a = seg.index, b = a + seg.segment.length;
+        for (let i = a; i < b; i++) { startOf[i] = a; endOf[i] = b; }
+      }
+    } else {
+      /* No Intl.Segmenter: fall back to code point edges, which at least keeps
+         surrogate pairs intact. */
+      let i = 0;
+      for (const ch of s) {
+        for (let k = 0; k < ch.length; k++) { startOf[i + k] = i; endOf[i + k] = i + ch.length; }
+        i += ch.length;
+      }
+    }
+    startOf[s.length] = s.length;
+    endOf[s.length] = s.length;
+    return { startOf, endOf };
   }
 
   /* Every token must appear somewhere in the name, in any order — "bar protein"
@@ -690,7 +779,13 @@
         const at = rec.folded.indexOf(token, from);
         if (at === -1) break;
         found = true;
-        ranges.push([rec.map[at], rec.map[at + token.length]]);
+        const a = rec.map[at];
+        const b = rec.map[at + token.length];
+        /* Snapped outward to cluster edges; see clusterBounds. Using b - 1
+           reads the cluster containing the last character *inside* the match
+           rather than the one after it, and max() keeps that valid when the
+           fold made the range empty. */
+        ranges.push([rec.startOf[a], rec.endOf[Math.max(a, b - 1)]]);
         from = at + token.length;
       }
       if (!found) return null;
@@ -755,13 +850,30 @@
     /* A heading with nothing under it reads as a bug. */
     perSection.forEach((count, section) => { section.hidden = count === 0; });
 
-    searchClear.hidden = raw === "";
+    menuEl.classList.toggle("searching", searching);
+
+    /* Tracks the raw value, not the trimmed one: a field holding only spaces
+       still needs a way to empty it. */
+    searchClear.hidden = searchInput.value === "";
     noResults.hidden = !(searching && shown === 0);
     if (!noResults.hidden) noResultsQ.textContent = "“" + raw + "”";
 
-    if (!searching) searchStatus.textContent = "";
-    else if (shown === 0) searchStatus.textContent = "No matches";
-    else searchStatus.textContent = shown + " of " + searchIndex.length + " items";
+    if (!searching) setStatus("", true);
+    else if (shown === 0) setStatus("No matches");
+    else setStatus(shown + " of " + searchIndex.length + " items");
+  }
+
+  /* The visible count changes immediately — it is feedback on the keystroke
+     just made. Only the spoken one waits, because a live region updated per
+     character queues one announcement per character, and "monster" would be
+     read out seven times. Clearing announces at once, since that follows a
+     deliberate action rather than typing. */
+  let statusTimer = 0;
+  function setStatus(text, now) {
+    searchStatus.textContent = text;
+    clearTimeout(statusTimer);
+    if (now) { searchAnnounce.textContent = text; return; }
+    statusTimer = setTimeout(() => { searchAnnounce.textContent = text; }, 250);
   }
 
   /* No debounce, deliberately. The list is tens of rows, so a pass is far
@@ -778,8 +890,11 @@
   });
   searchClear.addEventListener("click", () => {
     searchInput.value = "";
-    applyFilter();
+    /* Focus moves before the filter runs, because applyFilter hides this very
+       button — blurring it first would close the on-screen keyboard, which
+       then bounces the pay bar through a hide and show. */
     searchInput.focus();
+    applyFilter();
   });
 
   function updateTotals() {
@@ -868,9 +983,10 @@
   const wrapEl = document.querySelector(".wrap");
   let lastBarH = 0;
   function syncBarClearance() {
-    /* Falls back to the last real measurement if the bar is ever measured at
-       zero, so the clearance under the list can never collapse and yank the
-       page out from under a thumb. */
+    /* Unreachable today — the keyboard hide below uses visibility precisely so
+       the bar keeps its box and stays measurable. Kept because the day someone
+       switches that to display:none, this is what stops the clearance under the
+       list collapsing and yanking the page out from under a thumb. */
     const h = barEl.offsetHeight || lastBarH;
     if (h) lastBarH = h;
     wrapEl.style.paddingBottom = (h + 28) + "px";
@@ -888,9 +1004,15 @@
 
   /* Focusing the search field opens the on-screen keyboard, which shrinks the
      *visual* viewport but leaves the layout viewport alone — so a fixed bottom
-     bar stays pinned to the bottom of the layout viewport, which is to say on
-     top of the keyboard. Nobody pays mid-search, so take the bar away while
-     the keyboard is up.
+     bar stays pinned to the bottom of the layout viewport and can end up drawn
+     over the keys. It is taken away while the keyboard is up.
+
+     Note this does mean the running total is not on screen while someone is
+     typing, and people do add items mid-search. The stepper still answers
+     that: the row turns blue and its own count changes on every tap. The
+     total is back the moment the keyboard closes. Worth confirming on a real
+     phone — if the bar turns out to be occluded by the keyboard anyway, this
+     whole block is doing nothing and can go.
 
      visibility rather than display: the bar keeps its layout box, so
      offsetHeight above stays truthful, the clearance padding does not
