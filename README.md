@@ -21,7 +21,7 @@ A tap-to-pay honor-system snack stand. Customers tap an NFC tag, pick what they 
 
 1. A customer taps their phone on the tag stuck to the snack container.
 2. Their phone opens the page, which loads the menu from `menu.json`.
-3. They tap the items they took, and a running total builds itself.
+3. They tap the items they took, and a running total builds itself. On a long menu there is a search box for finding an item by name.
 4. One button hands off to Venmo with the amount and a plain-English itemized note already filled in. A second button does the same through PayPal, once a PayPal.me handle is set.
 
 Because the tag only stores the page's URL, you never re-write a tag when prices change. You just change the menu.
@@ -154,6 +154,8 @@ Because both stands share that origin, the origin check cannot tell this editor 
 ## Good to know
 
 - **Both pages adapt to light and dark mode** automatically.
+- **The menu has a search box once it passes 15 items**, and none below that, where scrolling is quicker than reaching for a keyboard. It matches on item name only, ignoring case and accents, and every word you type has to appear somewhere in the name — so "bar protein" finds "Ready Protein Bar". Results filter as you type.
+- **Search never touches the cart.** An item you have already added stays in the total and in the Venmo note even while the search is hiding it, and clearing the search brings every quantity back exactly as it was. The totals bar is always the truth about what is being bought, which is why it is worth a glance before paying.
 - **The pay buttons stay disabled** until at least one item is added, so nobody sends a zero payment.
 - **The PayPal button is off until you set a handle.** Clear the "PayPal.me username" field in the editor and the button is hidden entirely, leaving Venmo as the only way to pay. Fill it back in and it returns. The value is the part after `paypal.me/` in your link — the editor will stop you if you paste the whole URL or put an `@` on the front, because either produces a link that fails silently.
 - **PayPal payments arrive without the itemized note.** PayPal.me links carry an amount and nothing else, so the note only rides along on Venmo. That is a PayPal limitation, not a bug here.
