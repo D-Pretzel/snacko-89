@@ -32,6 +32,10 @@
     --accent-tint: #FBEAE0;
     --blue: #3A7BD5;           /* selection blue — active row + plus hover */
     --blue-tint: #E4EEFB;
+    /* Search-hit highlight. Deliberately not --blue-tint: that is tuned to sit
+       against --bg for the selected-row fill, and a <mark> sits against
+       --panel, where it needs more separation to read. */
+    --hit: #CFE0F7;
     --venmo: #008CFF;
     --paypal: #0070BA;
     --shadow: 0 1px 2px rgba(20,22,26,.04), 0 6px 18px rgba(20,22,26,.05);
@@ -47,6 +51,7 @@
       --rule-2: #292C33;
       --accent-tint: #3A2018;
       --blue-tint: #172436;
+      --hit: #2C4A6B;
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
     }
   }
@@ -78,6 +83,66 @@
   h1 {
     font-size: 26px; font-weight: 700; letter-spacing: -.015em;
     margin: 0; line-height: 1;
+  }
+
+  /* Search */
+  .search {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 12px;
+    margin-bottom: 12px;
+    background: var(--panel);
+    border: 1px solid var(--rule-2);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    transition: border-color .18s ease;
+  }
+  .search:focus-within { border-color: var(--blue); }
+  .search[hidden] { display: none; }
+
+  .search-icon { flex: 0 0 auto; width: 16px; height: 16px; color: var(--muted); }
+
+  #searchInput {
+    flex: 1 1 auto; min-width: 0;
+    border: none; outline: none; background: transparent;
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    /* 16px is the floor: below it, iOS Safari zooms the page on focus and the
+       customer is left pinched in on a menu they then have to scroll sideways. */
+    font-size: 16px;
+    padding: 13px 0;
+  }
+  #searchInput::placeholder { color: var(--muted); }
+  /* Replaced by .search-clear, so the control matches the rest of the page. */
+  #searchInput::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+  .search-clear {
+    flex: 0 0 auto;
+    width: 34px; height: 34px; border-radius: 9px;
+    border: none; background: transparent; color: var(--muted);
+    font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+  }
+  .search-clear:hover { background: var(--bg); color: var(--ink); }
+  .search-clear:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .search-clear[hidden] { display: none; }
+
+  .search-status {
+    margin: -2px 0 12px;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  /* Collapses the gap when there is nothing to say, without leaving the live
+     region display:none — screen readers announce changes less reliably then. */
+  .search-status:empty { margin: 0; }
+
+  mark {
+    background: var(--hit);
+    color: inherit;   /* never the UA's black-on-yellow, which fights dark mode */
+    border-radius: 3px;
+    padding: 0 1px;
   }
 
   /* Category sections */
@@ -115,6 +180,10 @@
     border-color: var(--blue);
     background: var(--blue-tint);
   }
+  /* Author `display: grid` above beats the UA sheet's `[hidden] { display: none }`
+     no matter the specificity, so filtered-out rows need this to actually go
+     away. Same reason `.search` and `.pay.alt` each carry one. */
+  .item[hidden] { display: none; }
 
   .name-lead {
     display: flex; align-items: baseline; gap: 8px;
@@ -229,6 +298,9 @@
     border-top: 1px solid var(--rule);
   }
   .bar .inner { max-width: 520px; margin: 0 auto; }
+  /* Set while the on-screen keyboard is up. visibility, not display, so the
+     bar keeps its box and the measured clearance below stays correct. */
+  .bar.kb-hidden { visibility: hidden; }
 
   /* Count and total on one line. The dashed rule stays — it is the ledger
      language the rest of the page is built on. */
@@ -316,8 +388,32 @@
       <h1>A-Flight Snacko Store</h1>
     </header>
 
+    <!-- Deliberately not sticky. The pay bar already takes fixed space at the
+         bottom; a second fixed strip would take back what that one gave up.
+         Hidden entirely on a short menu, where scrolling beats typing. -->
+    <div class="search" id="searchWrap" hidden>
+      <!-- Inline rather than a glyph: U+2315 and friends are missing from
+           enough phone fonts to show up as a blank or a tofu box. -->
+      <svg class="search-icon" viewBox="0 0 16 16" aria-hidden="true"
+           fill="none" stroke="currentColor" stroke-width="1.6">
+        <circle cx="6.8" cy="6.8" r="4.3" />
+        <path d="M10 10 L14 14" stroke-linecap="round" />
+      </svg>
+      <input type="search" id="searchInput" placeholder="Search items"
+             aria-label="Search the menu by item name"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false" enterkeyhint="search" />
+      <button type="button" class="search-clear" id="searchClear" aria-label="Clear search" hidden>✕</button>
+    </div>
+    <p class="search-status" id="searchStatus" role="status" aria-live="polite"></p>
+
     <div id="menu">
       <div class="state"><p>Loading menu…</p></div>
+    </div>
+
+    <div class="state" id="noResults" hidden>
+      <p>No items match <span id="noResultsQuery"></span>.</p>
+      <p class="hint">Try a shorter word, or clear the search.</p>
     </div>
   </div>
 
@@ -379,6 +475,18 @@
   const payBtn  = document.getElementById("payBtn");
   const paypalBtn = document.getElementById("paypalBtn");
 
+  const searchWrap   = document.getElementById("searchWrap");
+  const searchInput  = document.getElementById("searchInput");
+  const searchClear  = document.getElementById("searchClear");
+  const searchStatus = document.getElementById("searchStatus");
+  const noResults    = document.getElementById("noResults");
+  const noResultsQ   = document.getElementById("noResultsQuery");
+
+  /* Below this, scrolling the list is quicker than reaching for the keyboard,
+     and the field is just clutter. The menu is snacko-editable, so this is
+     re-evaluated on every render rather than decided once. */
+  const SEARCH_MIN_ITEMS = 15;
+
   let state = [];
   let venmoUsername = "";
   /* PayPal.me handle, without the "@" or any URL around it — the bit after
@@ -391,6 +499,13 @@
   let paypalHandle = "";
   let standName = "";
 
+  /* One record per rendered row: { row, section, nameEl, original, folded, map }.
+     Rebuilt by render(), read by applyFilter(). Filtering only toggles `hidden`
+     on rows that already exist — it never re-renders, because quantities live
+     in a closure created by itemRow() and re-rendering would silently reset
+     every one of them mid-shop. */
+  let searchIndex = [];
+
   function el(tag, className, text) {
     const n = document.createElement(tag);
     if (className) n.className = className;
@@ -400,6 +515,12 @@
 
   function showState(message, hint, withRetry) {
     state = [];
+    searchIndex = [];
+    searchWrap.hidden = true;
+    searchInput.value = "";
+    searchClear.hidden = true;
+    searchStatus.textContent = "";
+    noResults.hidden = true;
     updateTotals();
     menuEl.replaceChildren();
     const box = el("div", "state");
@@ -415,6 +536,7 @@
 
   function render(menu) {
     state = [];
+    searchIndex = [];
     menuEl.replaceChildren();
     document.title = menu.name || "A-Flight Snacko Store";
     const h1 = document.querySelector("h1");
@@ -442,7 +564,17 @@
       items.forEach(item => {
         const entry = { name: item.name, price: effectivePrice(item), qty: 0 };
         state.push(entry);
-        list.appendChild(itemRow(item, entry));
+        const row = itemRow(item, entry);
+        /* Folded once here, so a keystroke costs only indexOf over these. */
+        const folded = foldWithMap(item.name);
+        searchIndex.push({
+          row, section,
+          nameEl: row.querySelector(".name"),
+          original: item.name,
+          folded: folded.text,
+          map: folded.map,
+        });
+        list.appendChild(row);
       });
       section.appendChild(list);
       menuEl.appendChild(section);
@@ -452,6 +584,10 @@
       showState("Nothing for sale right now.", "Check back soon.", false);
       return;
     }
+
+    searchWrap.hidden = searchIndex.length < SEARCH_MIN_ITEMS;
+    if (searchWrap.hidden) searchInput.value = "";
+    applyFilter();          /* re-applies any live query across a menu reload */
     updateTotals();
   }
 
@@ -507,6 +643,144 @@
 
     return row;
   }
+
+  /* ---------------- search ------------------------------------------
+
+     Filtering hides rows, it does not rebuild them. Quantities therefore
+     survive every keystroke, and an item hidden by the search still counts
+     toward the total and the Venmo note — the totals bar stays the single
+     source of truth for what is being bought. Clearing the search brings
+     everything back untouched.                                          */
+
+  /* Case and accents folded away, plus a map from each folded character back
+     to where it started in the original. Stripping diacritics changes length
+     ("café" is five code points decomposed, four folded), so without the map
+     the highlight ranges would land off by however many accents preceded them.
+     for..of walks code points, so an emoji in a name stays in one piece. */
+  function foldWithMap(s) {
+    let text = "";
+    const map = [];
+    let i = 0;
+    for (const ch of s) {
+      const folded = ch.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+      text += folded;
+      /* One entry per UTF-16 code unit, because indexOf() below returns code
+         unit offsets. Walking `folded` with for..of instead would push a single
+         entry for an emoji that occupies two units, and every index after the
+         first emoji in a name would be off by one. */
+      for (let k = 0; k < folded.length; k++) map.push(i);
+      i += ch.length;
+    }
+    map.push(s.length);   /* sentinel, so a match running to the end maps back */
+    return { text, map };
+  }
+
+  function foldQuery(s) {
+    return s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+  }
+
+  /* Every token must appear somewhere in the name, in any order — "bar protein"
+     finds "Ready Protein Bar", which a plain substring test would miss.
+     Returns the ranges to highlight, or null when the row does not match. */
+  function matchRanges(rec, tokens) {
+    const ranges = [];
+    for (const token of tokens) {
+      let from = 0, found = false;
+      for (;;) {
+        const at = rec.folded.indexOf(token, from);
+        if (at === -1) break;
+        found = true;
+        ranges.push([rec.map[at], rec.map[at + token.length]]);
+        from = at + token.length;
+      }
+      if (!found) return null;
+    }
+    return mergeRanges(ranges);
+  }
+
+  /* Overlapping tokens ("pro" and "protein") would otherwise nest <mark>s. */
+  function mergeRanges(ranges) {
+    ranges.sort((a, b) => a[0] - b[0]);
+    const out = [];
+    ranges.forEach(r => {
+      const last = out[out.length - 1];
+      if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
+      else out.push([r[0], r[1]]);
+    });
+    return out;
+  }
+
+  /* Built from text nodes. Never innerHTML: item names are free text typed
+     into the editor, and the whole page is careful never to parse them as
+     HTML. A highlighter is exactly where that guarantee gets lost. */
+  function paintName(rec, ranges) {
+    const node = rec.nameEl;
+    if (!ranges || ranges.length === 0) {
+      if (node.firstElementChild || node.textContent !== rec.original) {
+        node.textContent = rec.original;
+      }
+      return;
+    }
+    node.replaceChildren();
+    let at = 0;
+    ranges.forEach(([start, end]) => {
+      if (start > at) node.appendChild(document.createTextNode(rec.original.slice(at, start)));
+      const m = document.createElement("mark");
+      m.textContent = rec.original.slice(start, end);
+      node.appendChild(m);
+      at = end;
+    });
+    if (at < rec.original.length) {
+      node.appendChild(document.createTextNode(rec.original.slice(at)));
+    }
+  }
+
+  function applyFilter() {
+    const raw = searchInput.value.trim();
+    const tokens = foldQuery(raw).split(/\s+/).filter(Boolean);
+    const searching = tokens.length > 0;
+
+    const perSection = new Map();
+    let shown = 0;
+
+    searchIndex.forEach(rec => {
+      const ranges = searching ? matchRanges(rec, tokens) : null;
+      const hit = !searching || ranges !== null;
+      rec.row.hidden = !hit;
+      if (hit) shown++;
+      perSection.set(rec.section, (perSection.get(rec.section) || 0) + (hit ? 1 : 0));
+      paintName(rec, hit ? ranges : null);
+    });
+
+    /* A heading with nothing under it reads as a bug. */
+    perSection.forEach((count, section) => { section.hidden = count === 0; });
+
+    searchClear.hidden = raw === "";
+    noResults.hidden = !(searching && shown === 0);
+    if (!noResults.hidden) noResultsQ.textContent = "“" + raw + "”";
+
+    if (!searching) searchStatus.textContent = "";
+    else if (shown === 0) searchStatus.textContent = "No matches";
+    else searchStatus.textContent = shown + " of " + searchIndex.length + " items";
+  }
+
+  /* No debounce, deliberately. The list is tens of rows, so a pass is far
+     inside one frame; a delay would only add lag to something already
+     instant, and make the results feel like they lag the typing. */
+  searchInput.addEventListener("input", applyFilter);
+  searchInput.addEventListener("search", applyFilter);  /* Esc / native clear */
+  searchInput.addEventListener("keydown", e => {
+    if (e.key === "Escape" && searchInput.value !== "") {
+      e.preventDefault();
+      searchInput.value = "";
+      applyFilter();
+    }
+  });
+  searchClear.addEventListener("click", () => {
+    searchInput.value = "";
+    applyFilter();
+    searchInput.focus();
+  });
 
   function updateTotals() {
     const total = state.reduce((s, it) => s + it.qty * it.price, 0);
@@ -592,8 +866,13 @@
      already wrong once. */
   const barEl = document.querySelector(".bar");
   const wrapEl = document.querySelector(".wrap");
+  let lastBarH = 0;
   function syncBarClearance() {
-    const h = barEl.offsetHeight;
+    /* Falls back to the last real measurement if the bar is ever measured at
+       zero, so the clearance under the list can never collapse and yank the
+       page out from under a thumb. */
+    const h = barEl.offsetHeight || lastBarH;
+    if (h) lastBarH = h;
     wrapEl.style.paddingBottom = (h + 28) + "px";
     /* Also drives scroll-margin-bottom on the rows, so tabbing to a control
        near the end of the list does not park it underneath the bar. */
@@ -606,6 +885,37 @@
     window.addEventListener("orientationchange", syncBarClearance);
   }
   syncBarClearance();
+
+  /* Focusing the search field opens the on-screen keyboard, which shrinks the
+     *visual* viewport but leaves the layout viewport alone — so a fixed bottom
+     bar stays pinned to the bottom of the layout viewport, which is to say on
+     top of the keyboard. Nobody pays mid-search, so take the bar away while
+     the keyboard is up.
+
+     visibility rather than display: the bar keeps its layout box, so
+     offsetHeight above stays truthful, the clearance padding does not
+     collapse, and the ResizeObserver never fires on the hide.
+
+     Do not add `interactive-widget=resizes-content` to the viewport meta —
+     it shrinks window.innerHeight in step with visualViewport.height, which
+     zeroes the gap this depends on and would quietly disable it on Android. */
+  const vv = window.visualViewport;
+  if (vv) {
+    /* 150px sits above the other things that shrink the visual viewport — the
+       collapsing URL bar (~60-90px) and iOS's input accessory bar (~44px) —
+       and below the shortest real keyboard (~160px, iPhone landscape). */
+    const KEYBOARD_MIN = 150;
+    const syncKeyboard = () => {
+      /* scale guards against a pinch-zoom, which also shrinks vv.height. */
+      const open = vv.scale <= 1.05 && (window.innerHeight - vv.height) > KEYBOARD_MIN;
+      barEl.classList.toggle("kb-hidden", open);
+    };
+    vv.addEventListener("resize", syncKeyboard);
+    /* iOS pans the visual viewport to keep the focused field in sight, which
+       can cross the threshold without a resize. */
+    vv.addEventListener("scroll", syncKeyboard);
+    syncKeyboard();
+  }
 
   load();
 </script>
