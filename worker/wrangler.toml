@@ -1,0 +1,20 @@
+# The `name` must match the Worker's name on the Cloudflare account exactly.
+# If it does not, `wrangler secret put` fails with
+#   This Worker does not exist on your account. [code: 10007]
+# which is a name mismatch, not an authentication problem.
+name = "snacko-89"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+# Both this project and the separate `snacko` project are served from the same
+# GitHub Pages origin (paths differ, origins do not), so this value cannot tell
+# the two apart. The project boundary is GH_REPO plus a distinct EDIT_PASSWORD,
+# not this check.
+ALLOWED_ORIGIN = "https://d-pretzel.github.io"
+GH_REPO = "D-Pretzel/snacko-89"
+GH_BRANCH = "main"
+
+# Secrets, set with `wrangler secret put` — never in this file:
+#   GH_TOKEN       fine-grained PAT, D-Pretzel/snacko-89 only, Contents: read+write
+#   EDIT_PASSWORD  shared password issued to the snacko

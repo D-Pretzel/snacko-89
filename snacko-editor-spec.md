@@ -1,5 +1,7 @@
 # Snacko Menu Editor: Build Specification
 
+> **Historical document — written for the original `snacko` project, kept for the reasoning behind the design.** Every `D-Pretzel/snacko` and `snacko.petzoldavid02.workers.dev` below refers to that repository, not this one. Do not copy the repository names or the binding table out of here when setting anything up: for this project they are `D-Pretzel/snacko-89` and `snacko-89.petzoldavid02.workers.dev`. [`worker/README.md`](worker/README.md) has the values that actually apply here.
+
 ## Purpose
 
 Add a password-protected web editor to the Snack-O project so a non-technical squadron snacko can manage the menu without ever visiting GitHub. All writes are brokered by a Cloudflare Worker that holds the GitHub credential. The customer facing page remains a static GitHub Pages site with no runtime dependency on the Worker.

@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex" />
-<title>Snack-O Editor</title>
+<title>Snack-O 89 Editor</title>
 
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icon-192.png" />
@@ -12,7 +12,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<meta name="apple-mobile-web-app-title" content="Snack-O Editor" />
+<!-- Distinct from the separate `snacko` project's editor, so the two do not
+     land on the home screen as two identical icons. -->
+<meta name="apple-mobile-web-app-title" content="Snack-O 89" />
 <meta name="theme-color" content="#F3EFE5" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#14161A" media="(prefers-color-scheme: dark)" />
 
@@ -293,7 +295,7 @@
   <header>
     <img class="mark" src="enjjpt-logo.png" alt="" />
     <div>
-      <h1>Snack-O Editor</h1>
+      <h1>Snack-O 89 Editor</h1>
       <div class="sub">Menu management</div>
     </div>
     <span class="spacer"></span>
@@ -342,7 +344,7 @@
     <button class="btn" id="addCatBtn" style="width:100%;">+ Add category</button>
 
     <div class="foot">
-      <a class="linky" id="historyLink" href="https://github.com/D-Pretzel/snacko/commits/main/menu.json" target="_blank" rel="noopener">See past versions</a>
+      <a class="linky" id="historyLink" href="https://github.com/D-Pretzel/snacko-89/commits/main/menu.json" target="_blank" rel="noopener">See past versions</a>
       <span class="dim" id="unsaved"></span>
     </div>
   </section>
@@ -366,11 +368,21 @@
 <script>
 /* =================================================================
    Set this to the URL wrangler prints after `wrangler deploy`.
-   ================================================================= */
-const WORKER_URL = "https://snacko.petzoldavid02.workers.dev";
 
-const REPO = "D-Pretzel/snacko";
-const PASS_KEY = "snacko.editPass";
+   This must be the snacko-89 Worker, not the one belonging to the
+   separate `snacko` project. The target repository is baked into the
+   Worker and is not sent from here, so pointing at the wrong Worker
+   silently commits this stand's menu over the other stand's.
+   ================================================================= */
+const WORKER_URL = "https://snacko-89.petzoldavid02.workers.dev";
+
+const REPO = "D-Pretzel/snacko-89";
+
+/* GitHub Pages serves every project of an account from one origin, and
+   localStorage is scoped to the origin rather than the path. An unqualified
+   key would therefore be shared with the separate `snacko` editor, so signing
+   in to one would hand the other a password that does not work there. */
+const PASS_KEY = "snacko89.editPass";
 
 const MAX_NAME = 60;
 const MAX_DESC = 200;

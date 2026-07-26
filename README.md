@@ -1,9 +1,19 @@
-# 🍿 Snack-O
+# 🍿 Snack-O 89
 
 A tap-to-pay honor-system snack stand. Customers tap an NFC tag, pick what they grabbed, and pay through Venmo in a single tap. No Square, no card reader, no monthly fees.
 
-- **Live page:** https://d-pretzel.github.io/snacko/
-- **Menu editor:** https://d-pretzel.github.io/snacko/admin.html
+- **Live page:** https://d-pretzel.github.io/snacko-89/
+- **Menu editor:** https://d-pretzel.github.io/snacko-89/admin.html
+
+> **This is not the `snacko` repository.** A separate stand runs the same code out of `D-Pretzel/snacko`, with its own Worker, its own GitHub token, and its own password. The two are kept apart in three places, and all three have to stay right:
+>
+> | | this repo | the other one |
+> | :--- | :--- | :--- |
+> | `WORKER_URL` in `admin.html` | `snacko-89.petzoldavid02.workers.dev` | `snacko.petzoldavid02.workers.dev` |
+> | `GH_REPO` in `worker/wrangler.toml` | `D-Pretzel/snacko-89` | `D-Pretzel/snacko` |
+> | `PASS_KEY` in `admin.html` | `snacko89.editPass` | `snacko.editPass` |
+>
+> The target repository lives in the Worker and is never sent by the browser, so a Worker can only write to the repository it was deployed with. That is the real safeguard — but it also means a wrong `WORKER_URL` fails silently, publishing this stand's menu over the other stand's with no error anywhere. `PASS_KEY` is separate because GitHub Pages serves both projects from one origin and `localStorage` is scoped to the origin rather than the path; a shared key would let signing in to one editor hand the other a password that does not work there.
 
 ---
 
@@ -22,7 +32,7 @@ The customer page has no server behind it: GitHub Pages hands out `index.html` a
 
 ## Changing the menu
 
-Open **https://d-pretzel.github.io/snacko/admin.html**, enter the editor password, and change what you need. There is no GitHub account, no code, and no file to find.
+Open **https://d-pretzel.github.io/snacko-89/admin.html**, enter the editor password, and change what you need. There is no GitHub account, no code, and no file to find.
 
 You can:
 
@@ -77,7 +87,7 @@ Every past version of the menu is in the repository's commit history, so a bad e
 
 ## Hosting
 
-Already configured, and there is no build step. GitHub Pages serves this repository's root from the `main` branch, so anything committed to `main` is live at `https://d-pretzel.github.io/snacko/` within about a minute. The setting is under **Settings → Pages**: source **Deploy from a branch**, branch `main`, folder `/ (root)`.
+There is no build step. GitHub Pages serves this repository's root from the `main` branch, so anything committed to `main` is live at `https://d-pretzel.github.io/snacko-89/` within about a minute. The setting is under **Settings → Pages**: source **Deploy from a branch**, branch `main`, folder `/ (root)`. Confirm it is switched on for this repository — it is a per-repository setting, and having it on for `snacko` does nothing for `snacko-89`.
 
 `index.html` and `menu.json` must stay in the repository root, since the page fetches `menu.json` as a relative path.
 
@@ -85,9 +95,9 @@ Already configured, and there is no build step. GitHub Pages serves this reposit
 
 ## The editor's plumbing
 
-Already deployed — this section is for maintaining it, not setting it up. Full detail lives in [`worker/README.md`](worker/README.md).
+Full detail, including first-time setup, lives in [`worker/README.md`](worker/README.md).
 
-The Worker is `snacko` on Cloudflare, serving `https://snacko.petzoldavid02.workers.dev`, and `admin.html` already points at it. It holds two secrets: a GitHub fine-grained token scoped to this repository with Contents read and write, and the shared editor password.
+The Worker is `snacko-89` on Cloudflare, serving `https://snacko-89.petzoldavid02.workers.dev`, and `admin.html` points at it. It holds two secrets: a GitHub fine-grained token scoped to **this** repository with Contents read and write, and the shared editor password. Give it a different password from the `snacko` stand — the two editors sit on the same origin and one password across both means whoever can edit either can edit both.
 
 The token never touches the browser. The editor only ever sends the Worker a password and a menu; the Worker checks the password, re-validates the menu against the schema, and makes the commit.
 
@@ -99,7 +109,7 @@ wrangler secret put EDIT_PASSWORD
 
 Type it at the prompt rather than passing it as an argument, so it stays out of your shell history. Anyone still signed in on the old password gets returned to the login screen the next time they save, with their unsaved edits intact.
 
-**The GitHub token expires.** When it does, saving fails and the error will not explain why. Mint a new fine-grained token with the same scope, run `wrangler secret put GH_TOKEN`, and revoke the old one. Keep the expiration date somewhere you will actually see it.
+**The GitHub token expires.** When it does, saving fails — the Worker now says so in plain words ("GitHub rejected the credential — the access token has likely expired"). Mint a new fine-grained token with the same scope, run `wrangler secret put GH_TOKEN`, and revoke the old one. Keep the expiration date somewhere you will actually see it.
 
 **Changing the Worker's code** means `wrangler deploy` from `worker/`. The `name` in `wrangler.toml` must match the Worker's name on the Cloudflare account exactly; if it does not, `wrangler secret put` fails with `This Worker does not exist on your account. [code: 10007]`, which is a name mismatch and not an authentication problem.
 
@@ -109,7 +119,7 @@ Type it at the prompt rather than passing it as an argument, so it stays out of 
 
 1. Buy blank NTAG213 or NTAG215 stickers. They are inexpensive and widely available.
 2. Install a free app like **NFC Tools** (iOS or Android).
-3. Choose **Write → Add a record → URL**, and enter `https://d-pretzel.github.io/snacko/`.
+3. Choose **Write → Add a record → URL**, and enter `https://d-pretzel.github.io/snacko-89/`.
 4. Hold the sticker to your phone to write it, then stick it on the container.
 
 Add a small "Tap to pay 📱" label near the tag so customers know what it is.
@@ -118,7 +128,9 @@ Add a small "Tap to pay 📱" label near the tag so customers know what it is.
 
 ## Testing before you launch
 
-**Set the Venmo username first.** It ships as the placeholder `your-venmo-username`, which is not a real account — until it is changed, the pay button opens a Venmo page that goes nowhere. Change it in the editor's "Venmo username" field, or in `menu.json`. Enter the handle without the `@`.
+**Both payment handles are set.** Venmo is `Thomas-Calabrese-8`, in `menu.json`. PayPal is `ThomasCalabrese797`, in the `PAYPAL_HANDLE` constant in `index.html`. They live in two different files because only the Venmo one is editable from `admin.html`; changing the PayPal handle means editing `index.html`.
+
+Send yourself a real payment of a dollar or two through each button before the tags go out. A handle that does not exist does not throw an error — Venmo and PayPal both just open a page that goes nowhere, or worse, to someone else with a similar handle.
 
 Then test on **both an iPhone and an Android** before sticking tags on anything. The browser-to-Venmo handoff behaves a little differently across phones, so confirm that the pay button opens Venmo with the correct amount already filled in, going to the right person.
 
@@ -131,6 +143,8 @@ python3 -m http.server 8000
 Then open `http://localhost:8000/`.
 
 The **editor** cannot be tested this way. The Worker only accepts requests from `https://d-pretzel.github.io`, so `admin.html` served from localhost is refused — that is the origin check doing its job, not a bug. Test the editor at its live URL, or see [`worker/README.md`](worker/README.md) for temporarily pointing `ALLOWED_ORIGIN` at a local server.
+
+Because both stands share that origin, the origin check cannot tell this editor from the other one. Whether a save lands in the right repository is decided entirely by `WORKER_URL` in `admin.html`, so verify the commit shows up under **`snacko-89`** the first time you save.
 
 ---
 
@@ -156,7 +170,9 @@ The **editor** cannot be tested this way. The Worker only accepts requests from 
 | `menu.json` | The menu itself. The only place menu data lives. |
 | `admin.html` | Password-protected menu editor. |
 | `manifest.json` | Makes the editor installable to a phone home screen. |
-| `worker/` | Cloudflare Worker that holds the GitHub token and does the committing. |
+| `worker/wrangler.toml` | Worker configuration: name, `GH_REPO`, `ALLOWED_ORIGIN`. Secrets are never in here. |
+| `worker/src/index.js` | The Worker itself. Checks the password, re-validates the menu, commits `menu.json`. |
+| `worker/README.md` | Worker setup, secret rotation, and local testing. |
 | `enjjpt-logo.png` | Squadron patch shown in the header (currently the 459th FTS Twin Dragons). |
 | `icon-192.png`, `icon-512.png` | Home-screen icons for the editor. |
 | `venmo-logo.png` | Venmo mark shown on the pay button. |

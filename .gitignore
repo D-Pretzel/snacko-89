@@ -1,0 +1,11 @@
+# wrangler's local cache holds the Cloudflare account id — keep it out of git.
+.wrangler/
+worker/.wrangler/
+
+node_modules/
+worker/node_modules/
+
+.dev.vars
+.env
+
+.DS_Store

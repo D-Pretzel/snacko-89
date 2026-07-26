@@ -1,7 +1,8 @@
 {
-  "name": "Snack-O Editor",
-  "short_name": "Snack-O",
-  "description": "Edit the Snack-O menu from your phone.",
+  "id": "/snacko-89/admin.html",
+  "name": "Snack-O 89 Editor",
+  "short_name": "Snack-O 89",
+  "description": "Edit the Snack-O 89 menu from your phone.",
   "start_url": "admin.html",
   "scope": "./",
   "display": "standalone",
