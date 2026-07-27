@@ -1,60 +1,34 @@
 {
   "name": "A-Flight Snacko Store",
   "venmoUsername": "Thomas-Calabrese-8",
-  "paypalHandle": "ThomasCalabrese797",
   "categories": [
     {
       "label": "Energy Drinks",
       "items": [
         {
-          "name": "White Monster",
-          "price": 2
-        },
-        {
-          "name": "Red Bull Zero Sugar",
-          "price": 2
-        },
-        {
-          "name": "Celcius",
-          "price": 1.75
-        },
-        {
-          "name": "Alani Nu Minis",
-          "price": 1.5
-        }
-      ]
-    },
-    {
-      "label": "Soda",
-      "items": [
-        {
-          "name": "Mexican Coke",
-          "price": 2
-        },
-        {
-          "name": "Coke Zero",
-          "price": 1
-        },
-        {
-          "name": "Fresca",
-          "price": 1
-        },
-        {
-          "name": "Diet Dr. Pepper",
-          "price": 1
-        }
-      ]
-    },
-    {
-      "label": "Other Drinks",
-      "items": [
-        {
-          "name": "Fairlife Chocolate Protein Shake",
+          "name": "Redbull",
           "price": 2.5
         },
         {
-          "name": "Propel Electrolyte Drink Powder Stick",
-          "price": 0.5
+          "name": "Monster",
+          "price": 2.5
+        }
+      ]
+    },
+    {
+      "label": "Non-Energy Drinks",
+      "items": [
+        {
+          "name": "Water",
+          "price": 0.25
+        },
+        {
+          "name": "Soda",
+          "price": 1
+        },
+        {
+          "name": "Capri Sun",
+          "price": 0.89
         }
       ]
     },
@@ -62,51 +36,38 @@
       "label": "Snacks",
       "items": [
         {
-          "name": "Ready Protein Bar",
+          "name": "Fruit Snacks",
+          "price": 0.25
+        },
+        {
+          "name": "Trail Mix",
+          "price": 0.89
+        },
+        {
+          "name": "Muffins",
           "price": 1
         },
         {
-          "name": "Boulder Potato Chips",
-          "price": 0.75
+          "name": "Uncrustable",
+          "price": 1
         },
         {
-          "name": "Archer Beef Stick",
-          "price": 0.5
+          "name": "Beef Sticks",
+          "price": 1.25
         },
         {
-          "name": "Fig Bar",
-          "price": 0.5
+          "name": "Nutella Go",
+          "price": 1.25
         },
         {
-          "name": "Kars Trail Mix",
-          "price": 0.5
+          "name": "Beef Jerky",
+          "price": 1.5
         },
         {
-          "name": "Kind Mini Granola Bar",
-          "price": 0.5
-        },
-        {
-          "name": "Bugles/Chex Mix/Gardetto Snack Pack",
-          "price": 0.5
+          "name": "Clif Bar",
+          "price": 1.5
         }
       ]
-    },
-    {
-      "label": "Fruit",
-      "items": [
-        {
-          "name": "Banana",
-          "price": 0.5
-        },
-        {
-          "name": "Apple",
-          "price": 0.5
-        }
-      ]
-    },
-    {
-      "label": "BEER",
-      "items": []
     }
   ]
 }
