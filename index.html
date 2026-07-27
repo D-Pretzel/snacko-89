@@ -36,8 +36,15 @@
        against --bg for the selected-row fill, and a <mark> sits against
        --panel, where it needs more separation to read. */
     --hit: #CFE0F7;
-    --venmo: #008CFF;
-    --paypal: #0070BA;
+    /* Each pay button wears the color of that brand's own checkout button, so
+       the two read as separate choices rather than one blue slab. Venmo's
+       azure is taken down a step from its #008CFF brand blue: the brand value
+       only reaches 3.4:1 against white label text, and this clears 4.5:1. */
+    --venmo: #0073D6;
+    --venmo-press: #005DB0;
+    --paypal: #FFC439;
+    --paypal-press: #F0B02A;
+    --paypal-ink: #003087;      /* 7.4:1 on the gold */
     --shadow: 0 1px 2px rgba(20,22,26,.04), 0 6px 18px rgba(20,22,26,.05);
     --radius: 12px;
   }
@@ -349,6 +356,9 @@
 
   .pay-row { display: flex; gap: 10px; }
 
+  /* The two buttons are peers: same size, same fill weight, same radius. Hue is
+     what tells them apart, not hierarchy — so neither one reads as the option
+     you were supposed to pick. Base is Venmo; .alt swaps in PayPal's colors. */
   .pay {
     flex: 1 1 0; min-width: 0;
     display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -357,7 +367,7 @@
     min-height: 52px;
     padding: 14px 16px;
     border: none; border-radius: 14px;
-    background: var(--ink); color: var(--bg);
+    background: var(--venmo); color: #fff;
     font-family: 'IBM Plex Sans', sans-serif;
     font-size: 16px; font-weight: 600;
     letter-spacing: .03em;
@@ -365,40 +375,40 @@
     text-decoration: none; cursor: pointer;
     transition: background .18s ease, color .18s ease;
   }
-  .pay:hover { background: var(--venmo); color: #fff; }
-  .pay:focus-visible { outline: 2px solid var(--venmo); outline-offset: 2px; }
-  .pay.disabled { background: var(--rule); color: var(--muted); pointer-events: none; }
+  /* Both already carry their brand color at rest, so hover presses the shade
+     down rather than changing it — the button stays the thing it was. */
+  .pay:hover { background: var(--venmo-press); }
+  /* One ring for both, in the page's own ink: it reads against cream, against
+     the dark bar, and against either fill, and keeps the two buttons peers
+     right down to the focus state. */
+  .pay:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-  /* PayPal is the secondary option, so it is outlined rather than filled —
-     two solid slabs are easy to confuse at a glance. The 1px border is taken
-     out of the padding so both buttons end up the same height. */
-  .pay.alt {
-    padding: 13px 15px;
-    border: 1px solid var(--rule);
-    background: transparent; color: var(--ink);
-    transition: background .18s ease, color .18s ease, border-color .18s ease;
-  }
-  .pay.alt:hover { background: var(--paypal); color: #fff; border-color: var(--paypal); }
-  .pay.alt:focus-visible { outline-color: var(--paypal); }
-  .pay.alt.disabled { background: transparent; border-color: var(--rule); color: var(--muted); opacity: .65; }
+  .pay.alt { background: var(--paypal); color: var(--paypal-ink); }
+  .pay.alt:hover { background: var(--paypal-press); }
   /* With no PayPal handle set, Venmo flexes out to the full width on its own. */
   .pay.alt[hidden] { display: none; }
+
+  /* An empty cart is not a moment to choose between them, so disabled drops the
+     brand color from both. Must stay below .alt — same specificity, and the
+     gray has to win. */
+  .pay.disabled, .pay.alt.disabled {
+    background: var(--rule); color: var(--muted); pointer-events: none;
+  }
 
   .venmo-logo, .paypal-logo {
     width: 24px; height: 24px; flex: 0 0 24px;
     display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 7px; padding: 2px;
+    border-radius: 7px;
     background: transparent;
-    transition: background .18s ease;
   }
   .venmo-logo img, .paypal-logo img { width: 100%; height: 100%; display: block; }
-  .pay:hover .venmo-logo { background: #fff; }
   .pay.disabled .venmo-logo, .pay.disabled .paypal-logo { opacity: .5; }
 
-  /* The PayPal monogram is dark blue on transparent, which disappears against
-     the dark-mode bar and against the blue hover fill, so it keeps a white
-     chip behind it in every state. */
-  .paypal-logo { background: #fff; padding: 3px; }
+  /* The Venmo mark is a blue tile with a white V, so it needs a white chip to
+     hold it off the blue button underneath. The PayPal monogram is navy on
+     transparent and sits straight on the gold, the way PayPal's own button
+     does — a chip there would only look like a sticker. */
+  .venmo-logo { background: #fff; padding: 2px; }
 
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
