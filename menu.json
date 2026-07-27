@@ -7,7 +7,11 @@
       "items": [
         {
           "name": "Redbull",
-          "price": 2.5
+          "price": 4.59,
+          "sale": {
+            "percentOff": 45,
+            "until": "2026-07-31"
+          }
         },
         {
           "name": "Monster",
