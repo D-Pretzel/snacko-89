@@ -410,6 +410,23 @@
      does — a chip there would only look like a sticker. */
   .venmo-logo { background: #fff; padding: 2px; }
 
+  /* Shown for a few seconds when the PayPal handoff puts the total on the
+     clipboard. It sits inside the bar rather than floating over the page, so
+     the bar's own height measurement picks it up and the list clearance
+     follows it instead of the message covering the last row. */
+  .copied {
+    display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+    margin: 0 0 10px; padding: 8px 10px;
+    border: 1px dashed var(--rule); border-radius: 8px;
+    font-size: 12.5px; line-height: 1.4; color: var(--ink);
+  }
+  /* display is set above, so the plain [hidden] rule needs restating to win. */
+  .copied[hidden] { display: none; }
+  .copied .amt {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums; font-weight: 600;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
   }
@@ -457,6 +474,11 @@
 
   <div class="bar">
     <div class="inner">
+      <!-- The PayPal app ignores the amount in the link and opens on the
+           recipient's profile, so the total is put on the clipboard on the way
+           out and said here. role="status" so it is announced rather than only
+           seen. -->
+      <p class="copied" id="copied" role="status" hidden></p>
       <div class="totals">
         <span class="items"><span id="count">0</span> <span id="countLabel">items</span></span>
         <span class="grand" id="total">$0.00</span>
@@ -512,6 +534,11 @@
   const countLabelEl = document.getElementById("countLabel");
   const payBtn  = document.getElementById("payBtn");
   const paypalBtn = document.getElementById("paypalBtn");
+  /* Declared up here with the rest rather than beside the PayPal click handler
+     that fills it, because updateTotals() clears it and would otherwise be
+     reaching at a const that has not been initialised yet. */
+  const copiedEl = document.getElementById("copied");
+  let copiedTimer = 0;
 
   const searchWrap   = document.getElementById("searchWrap");
   const searchInput  = document.getElementById("searchInput");
@@ -920,6 +947,15 @@
   function updateTotals() {
     const total = state.reduce((s, it) => s + it.qty * it.price, 0);
     const count = state.reduce((s, it) => s + it.qty, 0);
+
+    /* The message names an amount and the clipboard holds it, so both go stale
+       the moment the cart changes. Clear it rather than leave a number on
+       screen that is no longer what is owed. */
+    if (!copiedEl.hidden) {
+      copiedEl.hidden = true;
+      clearTimeout(copiedTimer);
+    }
+
     totalEl.textContent = money(total);
     countEl.textContent = count;
     countLabelEl.textContent = count === 1 ? "item" : "items";
@@ -938,22 +974,19 @@
 
     /* PayPal.me takes the amount as the last path segment and nothing else —
        no note, no currency argument. With no handle the button is already
-       hidden, so leave it without an href rather than building a link that
-       goes nowhere.
+       hidden, so leave it without an href rather than building a link to
+       paypal.me// that goes nowhere.
 
-       The link is written out as paypal.com/paypalme/... rather than the
-       shorter paypal.me/... on purpose. paypal.me is a shortener that
-       redirects here anyway, but on a phone the PayPal app claims the short
-       domain and its handler keeps only the handle — the amount falls off the
-       end and the customer lands on the profile page with an empty form.
-       Pointing at the canonical URL skips the hop that loses it.
+       In a browser this prefills the amount correctly. In the app it does not,
+       and there is nothing to be done about it from here — see the click
+       handler below.
 
        Do not be tempted to add a currency code. paypal.me/handle/5.00USD is
        valid and works in a browser, but the app treats the suffixed amount as
        unparseable and drops it entirely, which is worse than no currency. */
     if (paypalHandle) {
       paypalBtn.classList.remove("disabled");
-      paypalBtn.href = `https://www.paypal.com/paypalme/${encodeURIComponent(paypalHandle)}/${total.toFixed(2)}`;
+      paypalBtn.href = `https://paypal.me/${encodeURIComponent(paypalHandle)}/${total.toFixed(2)}`;
     } else {
       paypalBtn.classList.add("disabled");
       paypalBtn.removeAttribute("href");
@@ -1001,6 +1034,61 @@
     });
 
     window.location.href = venmoAppHref;
+  });
+
+  /* PayPal cannot be fixed the way Venmo was, and it is worth writing down why
+     so nobody spends another evening on it.
+
+     paypal.me is a *universal link*: PayPal has registered the domain to their
+     app, so iOS hands the app the whole URL — amount and all — without asking
+     first. That is why this button never shows the "Open in PayPal?" dialog the
+     Venmo one does; a custom scheme like venmo:// is unverified and always
+     prompts, a verified domain never does. Nothing is lost in transit. The
+     app's own router reads the handle, ignores the trailing amount, and opens
+     the profile page. Writing the link as paypal.com/paypalme/... instead
+     changes nothing, because the app claims that path too — that was tried.
+     And unlike Venmo there is no documented PayPal scheme to aim at instead.
+
+     So the amount goes on the clipboard on the way out and the customer is told
+     to paste it. Phones only: in a browser the amount prefills correctly and a
+     paste prompt would be noise. */
+  function announceAmount(amountText, onClipboard) {
+    copiedEl.textContent = "";
+    copiedEl.append(
+      document.createTextNode(onClipboard ? "PayPal opens on the profile page. Paste " : "PayPal opens on the profile page. Enter "),
+      el("span", "amt", amountText),
+      document.createTextNode(onClipboard ? " — it is on your clipboard." : " yourself."),
+    );
+    copiedEl.hidden = false;
+    clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => { copiedEl.hidden = true; }, 12000);
+  }
+
+  paypalBtn.addEventListener("click", (e) => {
+    if (!isPhone || paypalBtn.classList.contains("disabled") || !paypalBtn.href) return;
+    e.preventDefault();
+
+    const href = paypalBtn.href;
+    const shown = totalEl.textContent;          /* what the customer is looking at */
+    const plain = shown.replace(/[^0-9.]/g, ""); /* what PayPal's field will accept */
+
+    /* writeText only counts as permitted while the tap is still being handled,
+       so it is called here and not awaited — awaiting first would spend the
+       gesture and lose both the copy and the navigation. */
+    let writing = null;
+    try {
+      if (navigator.clipboard) writing = navigator.clipboard.writeText(plain);
+    } catch (_) { /* older WebKit throws outright rather than rejecting */ }
+
+    if (writing && writing.then) {
+      writing.then(() => announceAmount(shown, true), () => announceAmount(shown, false));
+    } else {
+      announceAmount(shown, false);
+    }
+
+    /* Long enough for the clipboard write to land, short enough not to feel
+       like a stuck button. The message is really for the trip back. */
+    setTimeout(() => { window.location.href = href; }, 400);
   });
 
   /* Reads like a sentence rather than a receipt dump: the "1x" is dropped for
