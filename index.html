@@ -538,6 +538,16 @@
   let paypalHandle = "";
   let standName = "";
 
+  /* The Venmo app's own link for the current cart, kept alongside payBtn.href
+     rather than in it — see the click handler below for why the button still
+     points at the web link. Empty until there is something to pay for. */
+  let venmoAppHref = "";
+
+  /* Only phones have an app to hand off to, so only phones take the app-first
+     path. A user-agent test is crude, but the cost of being wrong either way is
+     just the web link, which works everywhere. */
+  const isPhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
   /* One record per rendered row: { row, section, nameEl, original, folded, map }.
      Rebuilt by render(), read by applyFilter(). Filtering only toggles `hidden`
      on rows that already exist — it never re-renders, because quantities live
@@ -919,6 +929,7 @@
     if (total <= 0) {
       payBtn.classList.add("disabled");
       payBtn.removeAttribute("href");
+      venmoAppHref = "";
       paypalBtn.classList.add("disabled");
       paypalBtn.removeAttribute("href");
       return;
@@ -927,26 +938,70 @@
 
     /* PayPal.me takes the amount as the last path segment and nothing else —
        no note, no currency argument. With no handle the button is already
-       hidden, so leave it without an href rather than building a link to
-       paypal.me// that goes nowhere. */
+       hidden, so leave it without an href rather than building a link that
+       goes nowhere.
+
+       The link is written out as paypal.com/paypalme/... rather than the
+       shorter paypal.me/... on purpose. paypal.me is a shortener that
+       redirects here anyway, but on a phone the PayPal app claims the short
+       domain and its handler keeps only the handle — the amount falls off the
+       end and the customer lands on the profile page with an empty form.
+       Pointing at the canonical URL skips the hop that loses it.
+
+       Do not be tempted to add a currency code. paypal.me/handle/5.00USD is
+       valid and works in a browser, but the app treats the suffixed amount as
+       unparseable and drops it entirely, which is worse than no currency. */
     if (paypalHandle) {
       paypalBtn.classList.remove("disabled");
-      paypalBtn.href = `https://paypal.me/${encodeURIComponent(paypalHandle)}/${total.toFixed(2)}`;
+      paypalBtn.href = `https://www.paypal.com/paypalme/${encodeURIComponent(paypalHandle)}/${total.toFixed(2)}`;
     } else {
       paypalBtn.classList.add("disabled");
       paypalBtn.removeAttribute("href");
     }
 
-    /* The query is built by hand rather than with URLSearchParams, which
+    /* Both Venmo links carry the same three fields and differ only in shape.
+       The query is built by hand rather than with URLSearchParams, which
        encodes spaces as "+" — Venmo shows the note verbatim, plus signs and
        all. encodeURIComponent uses %20, which Venmo renders as a space. */
-    const query = [
-      "txn=pay",
-      "amount=" + encodeURIComponent(total.toFixed(2)),
-      "note="   + encodeURIComponent(buildNote()),
-    ].join("&");
-    payBtn.href = `https://venmo.com/${encodeURIComponent(venmoUsername)}?${query}`;
+    const user   = encodeURIComponent(venmoUsername);
+    const amount = encodeURIComponent(total.toFixed(2));
+    const note   = encodeURIComponent(buildNote());
+
+    payBtn.href = `https://venmo.com/${user}?txn=pay&amount=${amount}&note=${note}`;
+    /* The app's own scheme takes the recipient as a parameter instead of a
+       path segment, and pays through /paycharge rather than the profile. */
+    venmoAppHref = `venmo://paycharge?txn=pay&recipients=${user}&amount=${amount}&note=${note}`;
   }
+
+  /* On a phone the web link above is only the fallback. Tapping venmo.com there
+     does not go to Venmo directly: it loads Venmo's page, which rebuilds the
+     query as form-encoded data on its way into the app, and form encoding
+     writes a space as "+". The app then prints the note exactly as handed to
+     it, plus signs and all — which is why the note reads correctly in a browser
+     and arrives mangled on a phone. Handing the app its own scheme skips that
+     rebuild, so the %20s survive as spaces.
+
+     The href stays the web link so that a phone without Venmo installed still
+     has somewhere to go, and so long-press-to-copy still yields a URL that
+     means something. */
+  payBtn.addEventListener("click", (e) => {
+    if (!isPhone || !venmoAppHref || payBtn.classList.contains("disabled")) return;
+    e.preventDefault();
+
+    const webHref = payBtn.href;
+    /* Opening the app backgrounds this page, and that is the only signal we get
+       that it worked. Still visible a moment later means no app answered. */
+    const giveUp = setTimeout(() => {
+      if (!document.hidden) window.location.href = webHref;
+    }, 1200);
+    document.addEventListener("visibilitychange", function hidden() {
+      if (!document.hidden) return;
+      clearTimeout(giveUp);
+      document.removeEventListener("visibilitychange", hidden);
+    });
+
+    window.location.href = venmoAppHref;
+  });
 
   /* Reads like a sentence rather than a receipt dump: the "1x" is dropped for
      single items and the last one is joined with "and". */
