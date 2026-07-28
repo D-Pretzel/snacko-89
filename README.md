@@ -156,7 +156,7 @@ Because both stands share that origin, the origin check cannot tell this editor 
 ## Good to know
 
 - **Both pages adapt to light and dark mode** automatically.
-- **The menu has a search box once it passes 15 items**, and none below that, where scrolling is quicker than reaching for a keyboard. It matches on item name only, ignoring case and accents, and every word you type has to appear somewhere in the name — so "bar protein" finds "Ready Protein Bar". Results filter as you type.
+- **The menu has a search box once it reaches 10 items**, and none below that, where scrolling is quicker than reaching for a keyboard. It matches on item name only, ignoring case and accents, and every word you type has to appear somewhere in the name — so "bar protein" finds "Ready Protein Bar". Results filter as you type.
 - **Search never touches the cart.** An item you have already added stays in the total and in the Venmo note even while the search is hiding it, and clearing the search brings every quantity back exactly as it was. The totals bar is always the truth about what is being bought, which is why it is worth a glance before paying.
 - **The pay buttons stay disabled** until at least one item is added, so nobody sends a zero payment.
 - **The PayPal button is off until you set a handle.** Clear the "PayPal.me username" field in the editor and the button is hidden entirely, leaving Venmo as the only way to pay. Fill it back in and it returns. The value is the part after `paypal.me/` in your link — the editor will stop you if you paste the whole URL or put an `@` on the front, because either produces a link that fails silently.
