@@ -22,7 +22,7 @@ A tap-to-pay honor-system snack stand. Customers tap an NFC tag, pick what they 
 1. A customer taps their phone on the tag stuck to the snack container.
 2. Their phone opens the page, which loads the menu from `menu.json`.
 3. They tap the items they took, and a running total builds itself. On a long menu there is a search box for finding an item by name.
-4. One button hands off to Venmo with the amount and a plain-English itemized note already filled in. A second button does the same through PayPal, once a PayPal.me handle is set.
+4. One button hands off to Venmo with the amount and a plain-English itemized note already filled in. (A PayPal button exists in the code but is switched off — see *PayPal is turned off* below.)
 
 Because the tag only stores the page's URL, you never re-write a tag when prices change. You just change the menu.
 
@@ -38,7 +38,7 @@ You can:
 
 - Add, rename, reorder, and delete categories and items
 - Set prices, and move an item from one category to another
-- Change the Venmo username and the PayPal.me username, so a change of snacko needs no code change
+- Change the Venmo username, so a change of snacko needs no code change
 - Add a short description under any item ("12 oz cans")
 - Put an item on sale by a percentage, with an optional end date
 - Hide an item without deleting it, for when you are out of stock
@@ -78,7 +78,7 @@ A sale is stored as a percentage off, never as a second price. The discounted pr
 
 - `name` — what shows in the header and the browser tab.
 - `venmoUsername` — the handle, without the `@`. Required.
-- `paypalHandle` — the part after `paypal.me/` in your link, with no `@` and no slashes. Optional: empty or absent hides the PayPal button and leaves Venmo as the only way to pay.
+- `paypalHandle` — the part after `paypal.me/` in your link, with no `@` and no slashes. Currently unused: the PayPal button is switched off in code, so this value is kept and round-tripped but never read by the customer page. Leave it as it is and it will be there if PayPal is turned back on.
 - `price` — dollars, at most two decimal places.
 - `description` — optional. Leave it out and the row looks exactly as it always has.
 - `sale` — optional. `percentOff` is a whole number from 1 to 99; `until` is optional and formatted `YYYY-MM-DD`, and the last day counts.
@@ -131,13 +131,13 @@ Add a small "Tap to pay 📱" label near the tag so customers know what it is.
 
 ## Testing before you launch
 
-**Both payment handles are set**, and both live in `menu.json` where the editor can reach them: Venmo is `Thomas-Calabrese-8`, PayPal is `ThomasCalabrese797`. Neither one needs a code change to alter, so a change of snacko does not need a developer.
+**The Venmo handle is set** and lives in `menu.json` where the editor can reach it: `Thomas-Calabrese-8`. It needs no code change to alter, so a change of snacko does not need a developer. The PayPal handle is still in the file but nothing reads it while the button is off.
 
-Send yourself a real payment of a dollar or two through each button before the tags go out. A handle that does not exist does not throw an error — Venmo and PayPal both just open a page that goes nowhere, or worse, to someone else with a similar handle.
+Send yourself a real payment of a dollar or two through the button before the tags go out. A handle that does not exist does not throw an error — Venmo just opens a page that goes nowhere, or worse, to someone else with a similar handle.
 
 Then test on **both an iPhone and an Android** before sticking tags on anything. The browser-to-Venmo handoff behaves a little differently across phones, so confirm that the pay button opens Venmo with the correct amount already filled in, going to the right person. Read the note on the Venmo screen too, not just the amount: the words should be separated by spaces, and any `+` between them means the app link is not being taken and the handoff is re-encoding the note (see *Good to know*).
 
-Worth testing on a phone with **PayPal not installed**, and on one with it installed. Without the app, both buttons fall back to the website and should behave exactly as they do on a desktop, amount and all. With it, expect PayPal to open on the recipient's profile page with an empty amount field — that is PayPal's behaviour, not a fault here, and the reason the total is put on the clipboard on the way out (see *Good to know*). Check that pasting into that field gives the right number.
+Worth testing on a phone **without Venmo installed** as well. The button should fall back to the Venmo website and behave exactly as it does on a desktop, amount and note intact.
 
 To test locally, note that `index.html` now fetches `menu.json`, and browsers block `fetch` from `file://`. Opening the file by double-clicking it will show the error state. Serve the folder instead:
 
@@ -159,12 +159,7 @@ Because both stands share that origin, the origin check cannot tell this editor 
 - **The menu has a search box once it reaches 10 items**, and none below that, where scrolling is quicker than reaching for a keyboard. It matches on item name only, ignoring case and accents, and every word you type has to appear somewhere in the name — so "bar protein" finds "Ready Protein Bar". Results filter as you type.
 - **Search never touches the cart.** An item you have already added stays in the total and in the Venmo note even while the search is hiding it, and clearing the search brings every quantity back exactly as it was. The totals bar is always the truth about what is being bought, which is why it is worth a glance before paying.
 - **The pay buttons stay disabled** until at least one item is added, so nobody sends a zero payment.
-- **The PayPal button is off until you set a handle.** Clear the "PayPal.me username" field in the editor and the button is hidden entirely, leaving Venmo as the only way to pay. Fill it back in and it returns. The value is the part after `paypal.me/` in your link — the editor will stop you if you paste the whole URL or put an `@` on the front, because either produces a link that fails silently.
-- **PayPal payments arrive without the itemized note.** PayPal.me links carry an amount and nothing else, so the note only rides along on Venmo. That is a PayPal limitation, not a bug here.
-- **The PayPal app ignores the amount, and it cannot be fixed from this page.** In a browser `paypal.me/handle/5.00` prefills correctly. On a phone with the app installed it opens the recipient's *profile* page with an empty form. The amount is not being lost on the way: `paypal.me` is a **universal link**, meaning PayPal has registered the domain to their app, so iOS hands the app the entire URL, amount included. PayPal's own router is what reads the handle and discards the rest. Writing the link as `paypal.com/paypalme/…` instead changes nothing — the app claims that path too, and it was tried and reverted. There is no documented PayPal equivalent of `venmo://` to aim at instead.
-- **That is why the PayPal button never asks "Open in PayPal?" and the Venmo one does.** A universal link is a domain iOS has already verified against the app, so it opens silently. A custom scheme like `venmo://` is unverified — any app could claim it — so iOS always confirms first. The presence or absence of that dialog tells you which of the two mechanisms fired, which is worth knowing when either button starts misbehaving.
-- **So the total is copied to the clipboard instead.** Tapping PayPal on a phone puts the bare amount (`5.00`, no dollar sign) on the clipboard and says so above the totals, because the customer is about to land on a screen where they have to type it. Browsers do not get this — the amount prefills properly there and the message would only be noise. The message clears itself as soon as the cart changes, so it can never name an amount that is no longer owed.
-- **Never add a currency code to the PayPal link.** `paypal.me/handle/5.00USD` is a documented, valid form and it works in a browser, but the app treats the suffixed amount as unparseable and drops it altogether — strictly worse than leaving the currency off. The account's own currency is what gets charged either way.
+- **That is why the Venmo button asks "Open in Venmo?" first.** A custom scheme like `venmo://` is unverified — any app could claim it — so iOS always confirms before leaving Safari. A *universal link*, which is an ordinary `https://` address the app's owner has registered to it, opens silently instead because iOS has already verified the domain. Which of the two fired is worth knowing whenever a hand-off starts misbehaving, and the dialog is how you tell.
 - **The payment note is itemized** and written to read like a sentence, for example `E-Flight SNACKO: 2x Cookie and Soda`, so you can see what each sale was. It is prefixed with the stand name from `menu.json`, drops the `1x` for single items, and is trimmed at Venmo's 280-character limit.
 - **Sale prices are what customers are charged** — the total and the Venmo amount both use the discounted price.
 - **Item names are treated as plain text.** An apostrophe, an accent, or a stray `<` in a name shows up literally and cannot break the page.
@@ -172,6 +167,39 @@ Because both stands share that origin, the origin check cannot tell this editor 
 - **On a phone the Venmo button opens the app directly, not `venmo.com`.** Tapping the web link on a phone does not go to Venmo in one hop: it loads Venmo's page, which rebuilds the query as form-encoded data on its way into the app, and form encoding writes a space as `+`. The app then prints the note exactly as it was handed over. That is why the same note read correctly in a browser and arrived full of `+` on a phone — the mangling happened on Venmo's side of the handoff, after this page was done with it. The button now hands the app its own link (`venmo://paycharge?txn=pay&recipients=…`), which skips the rebuild, so the `%20`s survive as spaces.
 - **The web link is still the button's `href`.** The app link is tried first on a phone and the web link takes over if nothing answers within about a second, so a phone without Venmo installed still gets somewhere useful, and long-press-to-copy still yields a URL that means something. Desktop never tries the app link at all.
 - **Venmo's amount-prefill through links is undocumented** and has changed over the years. It works today, but if it ever breaks, the fix is on this page, not on the physical tags.
+
+---
+
+## PayPal is turned off
+
+The PayPal button is hidden on the customer page and its field is hidden in the editor. Venmo is the only way to pay. Nothing about PayPal is broken — this is a parked decision, not a bug, and the code is intact behind one switch in each file:
+
+| File | Switch |
+| :--- | :--- |
+| `index.html` | `const PAYPAL_ENABLED = false;` |
+| `admin.html` | `const PAYPAL_ENABLED = false;` |
+
+Set both to `true` and everything returns. `paypalHandle` is still stored, still validated by the Worker, and still round-tripped by the editor, so nothing has to be re-entered.
+
+**Why it is off.** In a browser `paypal.me/handle/5.00` prefills the amount correctly. On a phone with the PayPal app installed it does not: the app opens the recipient's *profile* page with an empty form, and the customer has no idea what to type. The amount is not lost in transit — `paypal.me` is a universal link, so iOS hands the app the entire URL, amount included, and PayPal's own router keeps the handle and discards the rest.
+
+Two things were tried and did not work. Rewriting the link as `paypal.com/paypalme/…` changes nothing, because the app claims that path too. Adding a currency code (`paypal.me/handle/5.00USD`) is a documented, valid form that works in a browser but makes the app drop the amount *entirely* — strictly worse. There is no documented PayPal equivalent of `venmo://` to aim at instead.
+
+**The one thing that does work, and what it costs.** A PayPal checkout link keeps the amount, because the app does not claim that path and it opens in the browser:
+
+```
+https://www.paypal.com/cgi-bin/webscr?cmd=_xclick
+  &business=<the PayPal account's email>
+  &item_name=<the itemized note>
+  &amount=<total>&currency_code=USD&no_shipping=1
+```
+
+It would also carry the itemized note, which PayPal.me has no room for. It was not adopted because of what it costs:
+
+- **A fee on every PayPal sale.** A checkout link is a goods-and-services payment, so PayPal takes 3.49% + $0.49, where PayPal.me between two personal accounts is free. On a 25&cent; water the fee is more than the water; on a $1 item it is more than half. PayPal's micropayments rate (4.99% + $0.09) fixes most of that, but you have to apply and it is account-wide and all-or-nothing.
+- **It is deprecated.** PayPal says Payments Standard and the Buy Now button should not be used for new integrations. It works today and may stop without notice — a poor foundation for a tag glued to a container.
+
+Taking that route also means a new `paypalEmail` field in `menu.json`, the editor, and the Worker's validator, and the Worker would need `wrangler deploy` before the editor is used again — its validator drops unrecognised fields, so an undeployed Worker would silently erase the setting on the first save.
 
 ---
 

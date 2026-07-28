@@ -337,7 +337,7 @@
         <input type="text" id="venmoName" autocapitalize="off" autocorrect="off" spellcheck="false" />
         <span class="err" id="venmoNameErr"></span>
       </label>
-      <label class="field" style="margin-bottom:0;">
+      <label class="field" id="paypalField" style="margin-bottom:0;">
         <span class="field-label">PayPal.me username (optional)</span>
         <input type="text" id="paypalName" autocapitalize="off" autocorrect="off" spellcheck="false" />
         <!-- Error before hint, so a problem sits against the field it is about
@@ -564,6 +564,15 @@ async function loadMenu() {
   renderEditor();
   show("editor");
 }
+
+/* Mirrors PAYPAL_ENABLED in index.html and must be kept in step with it.
+   False hides the PayPal field here and the PayPal button there. The stored
+   handle is deliberately left untouched — normalize() still reads it and
+   serialize() still writes it — so turning this back on restores the old
+   value with nothing to re-enter. */
+const PAYPAL_ENABLED = false;
+
+if (!PAYPAL_ENABLED) $("paypalField").hidden = true;
 
 function normalize(raw) {
   const src = (raw && typeof raw === "object") ? raw : {};
@@ -1017,7 +1026,7 @@ function validate() {
      though, catch the two things that produce a dead link without any error:
      pasting the whole paypal.me URL, and adding an "@" the way Venmo uses. */
   const paypal = menu.paypalHandle.trim();
-  if (paypal !== "") {
+  if (PAYPAL_ENABLED && paypal !== "") {
     if (paypal.length > MAX_NAME) {
       flagField("paypalName", `Keep it to ${MAX_NAME} characters.`, problems);
     } else if (paypal.includes("/")) {
