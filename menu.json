@@ -8,11 +8,7 @@
       "items": [
         {
           "name": "Redbull",
-          "price": 4.59,
-          "sale": {
-            "percentOff": 45,
-            "until": "2026-07-31"
-          }
+          "price": 2.5
         },
         {
           "name": "Monster",
@@ -46,7 +42,7 @@
         },
         {
           "name": "Trail Mix",
-          "price": 0.89
+          "price": 0.75
         },
         {
           "name": "Muffins",
@@ -70,6 +66,22 @@
         },
         {
           "name": "Clif Bar",
+          "price": 1.5
+        },
+        {
+          "name": "Rice Krispies",
+          "price": 0.5
+        },
+        {
+          "name": "Chips",
+          "price": 0.5
+        },
+        {
+          "name": "Cookies",
+          "price": 0.5
+        },
+        {
+          "name": "Mac & Cheese",
           "price": 1.5
         }
       ]
