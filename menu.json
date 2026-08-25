@@ -13,6 +13,10 @@
         {
           "name": "Monster",
           "price": 2.5
+        },
+        {
+          "name": "Celsius",
+          "price": 2
         }
       ]
     },
@@ -30,6 +34,10 @@
         {
           "name": "Capri Sun",
           "price": 0.89
+        },
+        {
+          "name": "Gatorade",
+          "price": 1
         }
       ]
     },
@@ -83,6 +91,10 @@
         {
           "name": "Mac & Cheese",
           "price": 1.5
+        },
+        {
+          "name": "Pop Tart",
+          "price": 1
         }
       ]
     }
